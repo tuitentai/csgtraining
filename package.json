@@ -10,10 +10,11 @@
   },
   "dependencies": {
     "lucide-react": "^0.555.0",
-    "@google/genai": "^1.30.0",
-    "react-dom": "^19.2.0",
-    "react": "^19.2.0",
-    "xlsx": "latest"
+  "@google/genai": "^1.30.0",
+  "react-dom": "^19.2.0",
+  "react": "^19.2.0",
+  "xlsx": "latest",
+  "@supabase/supabase-js": "^2.45.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",
