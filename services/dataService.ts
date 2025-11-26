@@ -1,7 +1,15 @@
 // 🔥 DATA SERVICE (FIREBASE VERSION)
 // Lưu toàn bộ dữ liệu BoardMembers, Config, Sessions lên Firestore cloud
 
-import { collection, getDocs, addDoc, updateDoc, doc, deleteDoc, setDoc } from "firebase/firestore";
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  doc,
+  deleteDoc,
+  setDoc,
+} from "firebase/firestore";
 import { db } from "./firebase";
 import { BoardMember, AppConfig, TrainingSession } from "../types";
 
@@ -13,7 +21,9 @@ const COLLECTION_SESSIONS = "trainingSessions";
 // --------- LẤY DANH SÁCH BAN CHỦ NHIỆM ---------
 export const getBoardMembers = async (): Promise<BoardMember[]> => {
   const snapshot = await getDocs(collection(db, COLLECTION_MEMBERS));
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as BoardMember));
+  return snapshot.docs.map(
+    (d) => ({ id: d.id, ...d.data() } as BoardMember)
+  );
 };
 
 // --------- THÊM HOẶC CẬP NHẬT BAN CHỦ NHIỆM ---------
@@ -58,7 +68,9 @@ export const updateAppConfig = async (config: AppConfig) => {
 // --------- LẤY DANH SÁCH CÁC BUỔI TRAINING ---------
 export const getSessions = async (): Promise<TrainingSession[]> => {
   const snapshot = await getDocs(collection(db, COLLECTION_SESSIONS));
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as TrainingSession));
+  return snapshot.docs.map(
+    (d) => ({ id: d.id, ...d.data() } as TrainingSession)
+  );
 };
 
 // --------- CẬP NHẬT TOÀN BỘ BUỔI TRAINING ---------
@@ -70,6 +82,18 @@ export const updateAllSessions = async (sessions: TrainingSession[]) => {
     } else {
       await addDoc(colRef, s);
     }
+  }
+};
+
+// --------- CẬP NHẬT 1 BUỔI TRAINING RIÊNG LẺ ---------
+export const updateSession = async (session: TrainingSession) => {
+  const colRef = collection(db, COLLECTION_SESSIONS);
+  if (session.id) {
+    // Nếu có id thì update
+    await setDoc(doc(colRef, session.id), session);
+  } else {
+    // Nếu chưa có thì thêm mới
+    await addDoc(colRef, session);
   }
 };
 
