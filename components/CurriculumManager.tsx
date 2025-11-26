@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { TrainingSession, Status, Department, BoardMember } from '../types';
-import { getSessions, updateSession, getBoardMembers } from '../services/dataService';
+import { getSessions, updateAllSessions, getBoardMembers } from '../services/dataService';
 import { Edit2, Save, ExternalLink, CheckCircle2, Clock, AlertCircle, Sparkles, ChevronDown, ListFilter, Calendar, Timer } from 'lucide-react';
 import GeminiAssistant from './GeminiAssistant';
 
@@ -15,13 +15,19 @@ const CurriculumManager: React.FC = () => {
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [aiContext, setAiContext] = useState({ topic: '', reqs: '' });
 
-  // ✅ Lấy dữ liệu thật từ Firestore
+  // ✅ Load dữ liệu thật từ Firestore
   useEffect(() => {
     const fetchData = async () => {
-      const sessionData = await getSessions();
-      const memberData = await getBoardMembers();
-      setSessions(sessionData || []);
-      setBoardMembers(memberData || []);
+      try {
+        const sData = await getSessions();
+        const bData = await getBoardMembers();
+        setSessions(Array.isArray(sData) ? sData : []);
+        setBoardMembers(Array.isArray(bData) ? bData : []);
+      } catch (error) {
+        console.error("🔥 Lỗi tải dữ liệu Firestore:", error);
+        setSessions([]);
+        setBoardMembers([]);
+      }
     };
     fetchData();
   }, []);
@@ -36,8 +42,9 @@ const CurriculumManager: React.FC = () => {
       const original = sessions.find(s => s.id === editingId);
       if (original) {
         const updated = { ...original, ...editForm } as TrainingSession;
-        await updateSession(updated);
-        setSessions(prev => prev.map(s => s.id === editingId ? updated : s));
+        const updatedList = sessions.map(s => s.id === editingId ? updated : s);
+        setSessions(updatedList);
+        await updateAllSessions(updatedList);
         setEditingId(null);
       }
     }
@@ -52,6 +59,11 @@ const CurriculumManager: React.FC = () => {
     setIsAiOpen(true);
   };
 
+  // ✅ Thêm bảo vệ để tránh crash khi dữ liệu chưa sẵn sàng
+  if (!Array.isArray(sessions) || !Array.isArray(boardMembers)) {
+    return <div className="p-6 text-center text-slate-500">Đang tải dữ liệu...</div>;
+  }
+
   // Helper to format date DD-MM-YYYY
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
@@ -60,11 +72,10 @@ const CurriculumManager: React.FC = () => {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
-  // Filter reviewers based on role
-  const potentialReviewers = (boardMembers || []).filter(m => 
+  const potentialReviewers = (boardMembers || []).filter(m =>
     m.role &&
-    (m.role.toLowerCase().includes('trưởng') || 
-    m.role.toLowerCase().includes('phó') || 
+    (m.role.toLowerCase().includes('trưởng') ||
+    m.role.toLowerCase().includes('phó') ||
     m.role.toLowerCase().includes('chủ nhiệm') ||
     m.role.toLowerCase().includes('mentor'))
   );
@@ -94,7 +105,7 @@ const CurriculumManager: React.FC = () => {
     if (!deadline) return null;
     if (status === Status.APPROVED)
       return <span className="text-[10px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded ml-2">Đúng hạn</span>;
-      
+
     const today = new Date();
     const deadlineDate = new Date(deadline);
     today.setHours(0,0,0,0);
@@ -169,7 +180,7 @@ const CurriculumManager: React.FC = () => {
 
                 return (
                   <tr key={session.id} className="group hover:bg-orange-50/30 transition-colors">
-                    {/* (phần nội dung bảng giữ nguyên như bạn gửi) */}
+                    {/* Toàn bộ phần hiển thị giữ nguyên như code cũ */}
                   </tr>
                 );
               })}
