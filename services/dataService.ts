@@ -1,4 +1,4 @@
-// dataService.ts (Firestore version - giữ nguyên 100% API như bản localStorage)
+// dataService.ts (Firestore version with editorEmails sync - GIỮ NGUYÊN 100% API)
 
 import { BoardMember, Department, LocationType, Status, TrainingSession, AppConfig } from '../types';
 import { db } from './firebaseService';
@@ -7,7 +7,6 @@ import {
   doc,
   getDocs,
   setDoc,
-  getDoc,
   onSnapshot,
   writeBatch,
   deleteDoc,
@@ -15,9 +14,9 @@ import {
 } from 'firebase/firestore';
 
 // ==============================
-// Giữ nguyên các hằng & dữ liệu khởi tạo (cho UI có dữ liệu ngay lần đầu)
+// GIỮ NGUYÊN các hằng & dữ liệu khởi tạo
 // ==============================
-const BOARD_MEMBERS_KEY = 'csg_board_members'; // giữ tên cũ để không vỡ import ở nơi khác (không còn dùng local)
+const BOARD_MEMBERS_KEY = 'csg_board_members'; // vẫn giữ tên cũ để không vỡ import
 const SESSIONS_KEY = 'csg_training_sessions';
 const APP_CONFIG_KEY = 'csg_app_config';
 
@@ -66,11 +65,14 @@ const INITIAL_CONFIG: AppConfig = {
   title: 'Cóc Sài Gòn',
   subtitle: 'TRAINING MANAGER',
   welcomeTitle: 'Xin chào Cóc Sài Gòn! 👋',
-  welcomeDescription: 'Hệ thống training website chuyên nghiệp cho đợt tuyển thành viên mới Gen Z.'
+  welcomeDescription: 'Hệ thống training website chuyên nghiệp cho đợt tuyển thành viên mới Gen Z.',
+  // NEW: luôn có sẵn mảng editorEmails để Firestore Rules tra cứu
+  // @ts-ignore - cho phép nếu AppConfig chưa khai báo trường này
+  editorEmails: []
 };
 
 // ==============================
-// Cache bộ nhớ + Listener Firestore để giữ API đồng bộ
+/* Cache bộ nhớ + Listener Firestore để GIỮ API ĐỒNG BỘ (không đổi code màn hình) */
 // ==============================
 let BOARD_MEMBERS_CACHE: BoardMember[] = [...INITIAL_BOARD_MEMBERS];
 let SESSIONS_CACHE: TrainingSession[] = [...INITIAL_SESSIONS];
@@ -111,30 +113,25 @@ const configDoc = doc(db, 'config', 'main');
 })();
 
 // ==============================
-// Giữ NGUYÊN CHỮ KÝ HÀM (đồng bộ) nhưng thao tác ghi là async nội bộ
+// GIỮ NGUYÊN CHỮ KÝ HÀM (đồng bộ), ghi Firestore ngầm async
 // ==============================
 
 export const getBoardMembers = (): BoardMember[] => {
-  // Lần đầu nếu cache chưa có dữ liệu cloud, trả về INITIAL để UI có thứ hiển thị
-  // Listener sẽ cập nhật cache khi Firestore trả dữ liệu.
   return BOARD_MEMBERS_CACHE;
 };
 
 export const updateBoardMembers = (members: BoardMember[]): void => {
-  // Ghi Firestore theo batch, không đổi chữ ký (không async/await bên ngoài)
   (async () => {
     try {
       const batch = writeBatch(db);
 
-      // Viết/ghi đè từng phần tử theo id hiện có
+      // Ghi/ghi đè từng member theo id
       const idsFromIncoming = new Set<string>(members.map(m => m.id));
-
       for (const m of members) {
-        const ref = doc(db, 'boardMembers', m.id);
-        batch.set(ref, m);
+        batch.set(doc(db, 'boardMembers', m.id), m);
       }
 
-      // Xóa những doc không còn trong danh sách mới
+      // Xóa doc không còn trong danh sách
       const snap = await getDocs(membersCol);
       for (const d of snap.docs) {
         if (!idsFromIncoming.has(d.id)) {
@@ -144,10 +141,22 @@ export const updateBoardMembers = (members: BoardMember[]): void => {
 
       await batch.commit();
 
-      // Cập nhật cache ngay để UI phản hồi tức thì
+      // ⚡ TỰ ĐỘNG ĐỒNG BỘ QUYỀN: gom email Mentor/Trưởng/Phó (lower-case, unique) → config/main.editorEmails
+      const editorEmails = members
+        .filter(m => {
+          const r = (m.role || '').toLowerCase();
+          return r.includes('trưởng') || r.includes('phó') || r.includes('mentor');
+        })
+        .map(m => (m.email || '').toLowerCase())
+        .filter(e => !!e);
+
+      const uniqueEditors = Array.from(new Set(editorEmails));
+      await setDoc(configDoc, { editorEmails: uniqueEditors } as any, { merge: true });
+
+      // Cập nhật cache để UI phản hồi ngay
       BOARD_MEMBERS_CACHE = [...members];
-    } catch (e) {
-      console.error('updateBoardMembers error:', e);
+    } catch (e: any) {
+      console.error('updateBoardMembers error:', e?.code, e?.message, e);
       alert('Không thể lưu danh sách nhân sự lên cloud. Vui lòng thử lại.');
     }
   })();
@@ -172,8 +181,8 @@ export const updateSession = (updatedSession: TrainingSession): void => {
         next.push(updatedSession);
       }
       SESSIONS_CACHE = next;
-    } catch (e) {
-      console.error('updateSession error:', e);
+    } catch (e: any) {
+      console.error('updateSession error:', e?.code, e?.message, e);
       alert('Không thể lưu slot training lên cloud. Vui lòng thử lại.');
     }
   })();
@@ -185,13 +194,13 @@ export const updateAllSessions = (sessions: TrainingSession[]): void => {
       const batch = writeBatch(db);
       const incomingIds = new Set<string>(sessions.map(s => s.id));
 
-      // Viết/ghi đè toàn bộ danh sách truyền vào
+      // Ghi/ghi đè toàn bộ danh sách truyền vào
       for (const s of sessions) {
         const ref = doc(db, 'sessions', s.id);
         batch.set(ref, s);
       }
 
-      // Xóa những doc không còn trong danh sách
+      // Xóa những doc không còn
       const snap = await getDocs(sessionsCol);
       for (const d of snap.docs) {
         if (!incomingIds.has(d.id)) {
@@ -201,10 +210,10 @@ export const updateAllSessions = (sessions: TrainingSession[]): void => {
 
       await batch.commit();
 
-      // Cập nhật cache ngay
+      // Cập nhật cache
       SESSIONS_CACHE = [...sessions];
-    } catch (e) {
-      console.error('updateAllSessions error:', e);
+    } catch (e: any) {
+      console.error('updateAllSessions error:', e?.code, e?.message, e);
       alert('Không thể lưu khung giáo án lên cloud. Vui lòng thử lại.');
     }
   })();
@@ -217,17 +226,16 @@ export const getAppConfig = (): AppConfig => {
 export const updateAppConfig = (config: AppConfig): void => {
   (async () => {
     try {
-      await setDoc(configDoc, config, { merge: true });
+      await setDoc(configDoc, config as any, { merge: true });
       APP_CONFIG_CACHE = { ...APP_CONFIG_CACHE, ...config };
-    } catch (e) {
-      console.error('updateAppConfig error:', e);
+    } catch (e: any) {
+      console.error('updateAppConfig error:', e?.code, e?.message, e);
       alert('Không thể lưu cấu hình giao diện lên cloud. Vui lòng thử lại.');
     }
   })();
 };
 
 export const resetData = (): void => {
-  // Thay vì xóa localStorage, ta xóa dữ liệu trên Firestore cho đồng bộ giữa mọi người
   (async () => {
     try {
       // Xóa sessions
@@ -242,18 +250,18 @@ export const resetData = (): void => {
         await deleteDoc(doc(db, 'boardMembers', d.id));
       }
 
-      // Reset config
-      await setDoc(configDoc, INITIAL_CONFIG);
+      // Reset config (bao gồm editorEmails rỗng)
+      await setDoc(configDoc, INITIAL_CONFIG as any);
 
       // Reset cache
       SESSIONS_CACHE = [...INITIAL_SESSIONS];
       BOARD_MEMBERS_CACHE = [...INITIAL_BOARD_MEMBERS];
       APP_CONFIG_CACHE = { ...INITIAL_CONFIG };
 
-      // Giữ nguyên hành vi cũ: reload UI
+      // Giữ nguyên hành vi cũ
       window.location.reload();
-    } catch (e) {
-      console.error('resetData error:', e);
+    } catch (e: any) {
+      console.error('resetData error:', e?.code, e?.message, e);
       alert('Không thể reset dữ liệu cloud. Vui lòng thử lại.');
     }
   })();
