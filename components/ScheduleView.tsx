@@ -27,6 +27,16 @@ const ScheduleView: React.FC = () => {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
+  // 🕒 Tính giờ kết thúc dựa trên giờ bắt đầu + thời lượng
+  const calculateEndTime = (startTime: string, duration: number) => {
+    if (!startTime || isNaN(duration)) return '';
+    const [hour, minute] = startTime.split(':').map(Number);
+    const totalMinutes = hour * 60 + minute + duration;
+    const endHour = Math.floor(totalMinutes / 60) % 24;
+    const endMinute = totalMinutes % 60;
+    return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
+  };
+
   const handleEditChange = (field: keyof TrainingSession, value: any) => {
     if (editedSession) {
       setEditedSession({ ...editedSession, [field]: value });
@@ -214,8 +224,12 @@ const ScheduleView: React.FC = () => {
                           className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-sm w-24 focus:border-orange-500"
                         />
                       ) : (
-                        <span>
-                          {session.startTime}{' '}
+                        <span className="flex items-center">
+                          <span className="font-bold text-slate-800">{session.startTime}</span>
+                          <span className="mx-1 text-slate-400">–</span>
+                          <span className="font-bold text-slate-800">
+                            {calculateEndTime(session.startTime, session.duration)}
+                          </span>
                           <span className="text-sm font-normal text-slate-400 ml-1">
                             ({session.duration}')
                           </span>
@@ -239,6 +253,12 @@ const ScheduleView: React.FC = () => {
                       {session.department}
                     </span>
                   </div>
+
+                  {isEditing && (
+                    <div className="text-[10px] text-slate-500 mb-2">
+                      Kết thúc: {calculateEndTime(currentData.startTime, currentData.duration)}
+                    </div>
+                  )}
 
                   <h4 className="font-bold text-slate-800 text-lg mb-1">{session.topic}</h4>
 
@@ -371,16 +391,15 @@ const ScheduleView: React.FC = () => {
               size={18}
               className={`mr-2 ${swapMode ? 'rotate-180' : ''}`}
             />
-            {swapMode ? "Đang bật Đổi lịch": "Đổi lịch"}
+            {swapMode ? "Đang bật Đổi lịch" : "Đổi lịch"}
           </button>
         )}
-
       </div>
 
       {swapMode && viewMode === 'list' && (
         <div className="bg-blue-50 border border-blue-100 text-blue-800 p-4 rounded-xl text-sm flex items-center justify-center">
           <div className="bg-white p-2 rounded-full mr-3 shadow-sm text-blue-600">
-            <ArrowRightLeft size={16}/>
+            <ArrowRightLeft size={16} />
           </div>
           {swapSource
             ? "Bước 2: Chọn slot thứ hai để hoán đổi vị trí."
@@ -392,7 +411,11 @@ const ScheduleView: React.FC = () => {
         {viewMode === 'list'
           ? uniqueDates.length > 0
             ? uniqueDates.map(date => renderDaySchedule(date))
-            : <div className="text-center py-20 text-slate-400">Chưa có lịch training nào.</div>
+            : (
+              <div className="text-center py-20 text-slate-400">
+                Chưa có lịch training nào.
+              </div>
+            )
           : renderCalendar()}
       </div>
     </div>
