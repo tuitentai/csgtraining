@@ -78,24 +78,48 @@ const membersCol = collection(db, 'boardMembers');
 const sessionsCol = collection(db, 'sessions');
 const configDoc = doc(db, 'config', 'main');
 
+// ==============================
+// 🔔 THÊM HỆ THỐNG THÔNG BÁO KHI FIRESTORE CẬP NHẬT DỮ LIỆU
+// ==============================
+let onDataChangeCallback: (() => void) | null = null;
+
+export const subscribeDataChanges = (callback: () => void) => {
+  onDataChangeCallback = callback;
+};
+
+function notifyDataChange() {
+  if (onDataChangeCallback) {
+    onDataChangeCallback();
+  }
+}
+
 // Khởi động listener ngay khi module được import
 (function initFirestoreSubscriptions() {
   try {
     // Board Members
     onSnapshot(query(membersCol), (snap) => {
       const arr: BoardMember[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-      if (arr.length > 0) BOARD_MEMBERS_CACHE = arr;
+      if (arr.length > 0) {
+        BOARD_MEMBERS_CACHE = arr;
+        notifyDataChange(); // 🔥 thêm dòng này
+      }
     });
 
     // Sessions
     onSnapshot(query(sessionsCol), (snap) => {
       const arr: TrainingSession[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-      if (arr.length > 0) SESSIONS_CACHE = arr;
+      if (arr.length > 0) {
+        SESSIONS_CACHE = arr;
+        notifyDataChange(); // 🔥 thêm dòng này
+      }
     });
 
     // Config
     onSnapshot(configDoc, (d) => {
-      if (d.exists()) APP_CONFIG_CACHE = { ...INITIAL_CONFIG, ...(d.data() as any) };
+      if (d.exists()) {
+        APP_CONFIG_CACHE = { ...INITIAL_CONFIG, ...(d.data() as any) };
+        notifyDataChange(); // 🔥 thêm dòng này
+      }
     });
   } catch (e) {
     console.error('Firestore onSnapshot init error:', e);
@@ -143,7 +167,6 @@ export const updateBoardMembers = (members: BoardMember[]): void => {
 
 // ==============================
 // ✅ THÊM EXPORT HỢP LỆ CHO CurriculumManager
-// (KHÔNG THAY ĐỔI LOGIC FIREBASE, chỉ giúp Vercel build được)
 // ==============================
 
 // Hàm lấy sessions (đồng bộ cache)
@@ -156,7 +179,6 @@ export const updateSession = (session: TrainingSession): void => {
   (async () => {
     try {
       await setDoc(doc(db, 'sessions', session.id), session, { merge: true });
-      // Cập nhật cache local để UI phản hồi ngay
       SESSIONS_CACHE = SESSIONS_CACHE.map(s => s.id === session.id ? session : s);
     } catch (e: any) {
       console.error('updateSession error:', e?.code, e?.message, e);
@@ -182,17 +204,13 @@ export const updateAllSessions = (sessions: TrainingSession[]): void => {
 
 // ✅ Đồng bộ AppConfig với Firestore
 export const getAppConfig = (): AppConfig => {
-  // Nếu Firestore chưa kịp trả snapshot, vẫn trả cache mặc định
   return APP_CONFIG_CACHE;
 };
 
 export const updateAppConfig = (config: AppConfig): void => {
   (async () => {
     try {
-      // Ghi trực tiếp lên Firestore (document: config/main)
       await setDoc(configDoc, config, { merge: true });
-
-      // Cập nhật cache local để UI phản hồi tức thời
       APP_CONFIG_CACHE = { ...config };
       console.log('✅ AppConfig updated to Firestore:', config);
     } catch (e: any) {
