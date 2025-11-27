@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { AdminUser } from '../types';
 import { Lock, Loader2, Mail, ShieldAlert } from 'lucide-react';
-import { getBoardMembers } from '../services/dataService';  // Lấy danh sách email và chức vụ từ Firestore
 
 interface Props {
   onLogin: (user: AdminUser) => void;
@@ -10,44 +9,21 @@ interface Props {
 const AdminLogin: React.FC<Props> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
-  const [boardMembers, setBoardMembers] = useState<any[]>([]); // Danh sách BCN & BDH
-
-  useEffect(() => {
-    // Lấy danh sách thành viên từ Firestore (BCN & BDH)
-    const fetchBoardMembers = async () => {
-      const members = await getBoardMembers();  // Hàm lấy danh sách từ Firestore
-      setBoardMembers(members);
-    };
-    
-    fetchBoardMembers();
-  }, []);
-
-  // Kiểm tra xem email có quyền đăng nhập không
-  const isValidEmail = (email: string) => {
-    return boardMembers.some((member) => 
-      member.email.toLowerCase() === email.toLowerCase() &&
-      (member.role === 'Mentor' || member.role === 'Phó Ban' || member.role === 'Trưởng Ban')
-    );
-  };
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if(!email) return;
 
     setIsLoading(true);
-
-    // Kiểm tra quyền email và chức vụ
-    if (!isValidEmail(email)) {
-      setIsLoading(false);
-      alert('Email không có quyền truy cập hoặc không phải thành viên quản lý.');
-      return;
-    }
-
-    // Nếu hợp lệ, thực hiện đăng nhập
+    // Simulating Google Login delay and extracting user info
     setTimeout(() => {
       setIsLoading(false);
-      // Lấy tên từ email cho mục đích demo
-      let name = email.split('@')[0];
+      
+      // Determine name based on email for demo purposes
+      let name = 'User';
+      if (email.includes('@')) {
+          name = email.split('@')[0];
+      }
 
       onLogin({
         email: email,
@@ -68,6 +44,7 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
             <p className="text-slate-400 text-sm mt-1">Hệ thống quản trị tập trung</p>
         </div>
         <div className="p-8">
+          
           <form onSubmit={handleLogin} className="space-y-5">
               <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Google Email</label>
@@ -111,4 +88,5 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
     </div>
   );
 };
+
 export default AdminLogin;
