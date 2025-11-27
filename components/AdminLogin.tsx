@@ -62,7 +62,7 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
           
           <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Google Email</label>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Mail</label>
                   <div className="relative group">
                       <Mail className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={18}/>
                       <input 
@@ -84,7 +84,7 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
                 {isLoading ? (
                   <Loader2 className="animate-spin mr-2" size={20} />
                 ) : null}
-                {isLoading ? 'Đang xác thực...' : 'Đăng Nhập với Google'}
+                {isLoading ? 'Đang xác thực...' : 'Đăng Nhập Gmail'}
               </button>
           </form>
 
