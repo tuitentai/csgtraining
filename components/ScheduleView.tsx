@@ -37,7 +37,7 @@ const ScheduleView: React.FC = () => {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
-  // 🕒 Hàm tính giờ kết thúc dựa trên giờ bắt đầu + thời lượng
+  // 🕒 Hàm tính giờ kết thúc
   const calculateEndTime = (startTime: string, duration: number) => {
     if (!startTime || isNaN(duration)) return '';
     const [hour, minute] = startTime.split(':').map(Number);
@@ -112,6 +112,14 @@ const ScheduleView: React.FC = () => {
     return day === 0 ? 6 : day - 1;
   };
 
+  // 🧠 Hàm update inline trong Calendar
+  const handleInlineEdit = (id: string, field: keyof TrainingSession, value: any) => {
+    const updated = sessions.map(s => (s.id === id ? { ...s, [field]: value } : s));
+    setSessions(updated);
+    const edited = updated.find(s => s.id === id);
+    if (edited) updateSession(edited); // lưu Firebase
+  };
+
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
@@ -145,27 +153,42 @@ const ScheduleView: React.FC = () => {
             {daySessions.map(session => (
               <div
                 key={session.id}
-                className={`text-[10px] px-2 py-1.5 rounded border-l-2 truncate
-                  ${
-                    session.department === Department.MEDIA
-                      ? 'bg-purple-50 text-purple-700 border-purple-500'
-                      : session.department === Department.EVENT
-                      ? 'bg-orange-50 text-orange-700 border-orange-500'
-                      : session.department === Department.ER
-                      ? 'bg-emerald-50 text-emerald-700 border-emerald-500'
-                      : 'bg-blue-50 text-blue-700 border-blue-500'
-                  }`}
+                className={`text-[10px] px-2 py-1.5 rounded border-l-2 truncate ${
+                  session.department === Department.MEDIA
+                    ? 'bg-purple-50 text-purple-700 border-purple-500'
+                    : session.department === Department.EVENT
+                    ? 'bg-orange-50 text-orange-700 border-orange-500'
+                    : session.department === Department.ER
+                    ? 'bg-emerald-50 text-emerald-700 border-emerald-500'
+                    : 'bg-blue-50 text-blue-700 border-blue-500'
+                }`}
                 title={`${session.startTime} - ${session.topic}`}
               >
-                <div className="font-bold flex justify-between items-center mb-0.5">
-                  <span>
-                    {session.startTime} – {calculateEndTime(session.startTime, session.duration)}
-                    <span className="ml-1 opacity-70">({session.duration}')</span>
-                  </span>
-                  <span className="opacity-90 text-[9px] bg-white/50 px-1 rounded ml-1 truncate max-w-[50%]">
-                    {session.locationDetail || (session.locationType === LocationType.HALL ? 'Hall' : 'P.?')}
-                  </span>
+                <div className="flex justify-between items-center mb-0.5">
+                  {/* Giờ bắt đầu – kết thúc */}
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="time"
+                      value={session.startTime}
+                      onChange={e => handleInlineEdit(session.id, 'startTime', e.target.value)}
+                      className="bg-transparent border border-transparent hover:border-slate-200 rounded px-1 w-14 text-[10px] focus:border-blue-400 focus:bg-white"
+                    />
+                    <span className="text-slate-400">–</span>
+                    <span>{calculateEndTime(session.startTime, session.duration)}</span>
+                  </div>
+
+                  {/* Chỉnh thời lượng */}
+                  <div className="flex items-center">
+                    <input
+                      type="number"
+                      value={session.duration}
+                      onChange={e => handleInlineEdit(session.id, 'duration', Number(e.target.value))}
+                      className="ml-1 w-10 text-right bg-transparent border border-transparent hover:border-slate-200 rounded text-[10px] focus:border-blue-400 focus:bg-white"
+                    />
+                    <span className="ml-0.5 text-[9px] text-slate-400">p</span>
+                  </div>
                 </div>
+
                 <div className="truncate font-medium mb-0.5">{session.topic}</div>
                 <div className="truncate opacity-75 text-[9px] flex items-center">
                   <User size={8} className="mr-0.5" /> {session.trainerName || 'No Trainer'}
@@ -198,6 +221,7 @@ const ScheduleView: React.FC = () => {
             </button>
           </div>
         </div>
+
         <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/50">
           {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
             <div key={d} className="py-2 text-center text-xs font-bold text-slate-400 uppercase">
@@ -210,7 +234,7 @@ const ScheduleView: React.FC = () => {
     );
   };
 
-  // 🧾 List View (giữ nguyên + thêm hiển thị giờ kết thúc)
+  // 🧾 List View (không thay đổi, chỉ thêm giờ kết thúc)
   const renderDaySchedule = (dateStr: string) => {
     const daySessions = sessions.filter(s => s.date === dateStr);
     const dateObj = new Date(dateStr);
