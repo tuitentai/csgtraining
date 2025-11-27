@@ -129,11 +129,13 @@ const ScheduleView: React.FC = () => {
     if (tempSession) setTempSession({ ...tempSession, [field]: value });
   };
 
+  // ✅ Giữ nguyên viewMode khi lưu
   const handleSaveModal = () => {
     if (tempSession) {
       updateSession(tempSession);
       setSessions(prev => prev.map(s => (s.id === tempSession.id ? tempSession : s)));
     }
+    // Giữ nguyên viewMode
     setEditModal({ open: false, session: null });
     setTempSession(null);
   };
@@ -201,6 +203,11 @@ const ScheduleView: React.FC = () => {
                 <div className="truncate font-medium mb-0.5">{session.topic}</div>
                 <div className="truncate opacity-75 text-[9px] flex items-center">
                   <User size={8} className="mr-0.5" /> {session.trainerName || 'No Trainer'}
+                </div>
+                {/* ✅ Hiển thị địa điểm */}
+                <div className="truncate text-[9px] text-slate-500 flex items-center">
+                  <MapPin size={8} className="mr-0.5" />
+                  {session.locationDetail || (session.locationType === LocationType.HALL ? 'Hall' : 'P.?')}
                 </div>
               </div>
             ))}
