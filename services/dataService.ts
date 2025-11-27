@@ -14,7 +14,7 @@ import {
 // ==============================
 // GIỮ NGUYÊN các hằng & dữ liệu khởi tạo
 // ==============================
-const BOARD_MEMBERS_KEY = 'csg_board_members'; // vẫn giữ tên cũ để không vỡ import
+const BOARD_MEMBERS_KEY = 'csg_board_members'; 
 const SESSIONS_KEY = 'csg_training_sessions';
 const APP_CONFIG_KEY = 'csg_app_config';
 
@@ -25,11 +25,9 @@ const INITIAL_BOARD_MEMBERS: BoardMember[] = [
 ];
 
 const INITIAL_SESSIONS: TrainingSession[] = [
-  // General
   {
     id: 'gen-1', topic: 'Office + Mail Tổng', department: Department.GENERAL, trainerName: 'Nguyễn Văn A', materialsLink: '', requirements: 'Quy trình sử dụng mail, cách soạn văn bản hành chính', status: Status.PENDING, reviewerName: 'Ban Kiểm Soát', date: '2024-12-07', startTime: '08:00', duration: 45, locationType: LocationType.HALL, locationDetail: 'Hall A', deadline: '2024-12-05'
   },
-  // Media
   {
     id: 'med-1', topic: 'Training Design', department: Department.MEDIA, trainerName: '', materialsLink: '', requirements: 'Cơ bản về Photoshop/Illustrator, Brand guidelines', status: Status.PENDING, reviewerName: 'Trưởng Ban Media', date: '2024-12-06', startTime: '13:30', duration: 45, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-04'
   },
@@ -42,7 +40,6 @@ const INITIAL_SESSIONS: TrainingSession[] = [
   {
     id: 'med-4', topic: 'Training Video Edition', department: Department.MEDIA, trainerName: '', materialsLink: '', requirements: 'Premiere/Capcut cơ bản, Tư duy dựng', status: Status.PENDING, reviewerName: 'Trưởng Ban Media', date: '2024-12-06', startTime: '16:15', duration: 45, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-04'
   },
-  // Event
   {
     id: 'evt-1', topic: 'Training Event Production', department: Department.EVENT, trainerName: '', materialsLink: '', requirements: 'Chạy chương trình, setup âm thanh ánh sáng', status: Status.PENDING, reviewerName: 'Trưởng Ban Event', date: '2024-12-07', startTime: '09:00', duration: 45, locationType: LocationType.HALL, locationDetail: 'Hall B', deadline: '2024-12-05'
   },
@@ -52,7 +49,6 @@ const INITIAL_SESSIONS: TrainingSession[] = [
   {
     id: 'evt-3', topic: 'Training Paperwork', department: Department.EVENT, trainerName: '', materialsLink: '', requirements: 'Giấy tờ xin phép, thủ tục hành chính', status: Status.PENDING, reviewerName: 'Trưởng Ban Event', date: '2024-12-07', startTime: '11:00', duration: 30, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-05'
   },
-  // ER
   {
     id: 'er-1', topic: 'Kỹ năng Đối ngoại', department: Department.ER, trainerName: '', materialsLink: '', requirements: 'Giao tiếp, xin tài trợ, giữ mối quan hệ', status: Status.PENDING, reviewerName: 'Trưởng Ban ER', date: '2024-12-07', startTime: '13:30', duration: 45, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-05'
   },
@@ -68,7 +64,7 @@ const INITIAL_CONFIG: AppConfig = {
 };
 
 // ==============================
-// Cache bộ nhớ + Listener Firestore để GIỮ API ĐỒNG BỘ
+// Cache + Listener Firestore
 // ==============================
 let BOARD_MEMBERS_CACHE: BoardMember[] = [...INITIAL_BOARD_MEMBERS];
 let SESSIONS_CACHE: TrainingSession[] = [...INITIAL_SESSIONS];
@@ -78,23 +74,17 @@ const membersCol = collection(db, 'boardMembers');
 const sessionsCol = collection(db, 'sessions');
 const configDoc = doc(db, 'config', 'main');
 
-// ==============================
-// 🔔 HỆ THỐNG THÔNG BÁO + CỜ ĐỒNG BỘ FIRESTORE
-// ==============================
 let onDataChangeCallback: (() => void) | null = null;
-let firestoreReady = false; // 🔥 thêm cờ trạng thái
+let firestoreReady = false;
 
 export const subscribeDataChanges = (callback: () => void) => {
   onDataChangeCallback = callback;
 };
 
 function notifyDataChange() {
-  if (onDataChangeCallback) {
-    onDataChangeCallback();
-  }
+  if (onDataChangeCallback) onDataChangeCallback();
 }
 
-// 🔥 Hàm chờ Firestore load lần đầu (App sẽ gọi)
 export const waitForFirestoreReady = async (): Promise<void> => {
   return new Promise((resolve) => {
     if (firestoreReady) resolve();
@@ -109,34 +99,30 @@ export const waitForFirestoreReady = async (): Promise<void> => {
   });
 };
 
-// Khởi động listener ngay khi module được import
 (function initFirestoreSubscriptions() {
   try {
-    // Board Members
     onSnapshot(query(membersCol), (snap) => {
       const arr: BoardMember[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
       if (arr.length > 0) {
         BOARD_MEMBERS_CACHE = arr;
-        firestoreReady = true; // 🔥 đánh dấu đã có dữ liệu
+        firestoreReady = true;
         notifyDataChange();
       }
     });
 
-    // Sessions
     onSnapshot(query(sessionsCol), (snap) => {
       const arr: TrainingSession[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
       if (arr.length > 0) {
         SESSIONS_CACHE = arr;
-        firestoreReady = true; // 🔥 đánh dấu đã có dữ liệu
+        firestoreReady = true;
         notifyDataChange();
       }
     });
 
-    // Config
     onSnapshot(configDoc, (d) => {
       if (d.exists()) {
         APP_CONFIG_CACHE = { ...INITIAL_CONFIG, ...(d.data() as any) };
-        firestoreReady = true; // 🔥 đánh dấu đã có dữ liệu
+        firestoreReady = true;
         notifyDataChange();
       }
     });
@@ -164,7 +150,6 @@ export const updateBoardMembers = (members: BoardMember[]): void => {
 
       await batch.commit();
 
-      // Tự động đồng bộ quyền
       const editorEmails = members
         .filter(m => {
           const r = (m.role || '').toLowerCase();
@@ -184,12 +169,8 @@ export const updateBoardMembers = (members: BoardMember[]): void => {
   })();
 };
 
-// Hàm lấy sessions (đồng bộ cache)
-export const getSessions = (): TrainingSession[] => {
-  return SESSIONS_CACHE;
-};
+export const getSessions = (): TrainingSession[] => SESSIONS_CACHE;
 
-// Hàm update session đơn lẻ (ghi Firestore thật)
 export const updateSession = (session: TrainingSession): void => {
   (async () => {
     try {
@@ -202,7 +183,6 @@ export const updateSession = (session: TrainingSession): void => {
   })();
 };
 
-// Cập nhật toàn bộ sessions (dùng cho AdminPanel)
 export const updateAllSessions = (sessions: TrainingSession[]): void => {
   (async () => {
     try {
@@ -217,10 +197,20 @@ export const updateAllSessions = (sessions: TrainingSession[]): void => {
   })();
 };
 
-// ✅ Đồng bộ AppConfig với Firestore
-export const getAppConfig = (): AppConfig => {
-  return APP_CONFIG_CACHE;
+// ✅ Thêm mới: XÓA session trên Firestore (và đồng bộ realtime)
+export const deleteSession = async (sessionId: string): Promise<void> => {
+  try {
+    await deleteDoc(doc(db, 'sessions', sessionId));
+    SESSIONS_CACHE = SESSIONS_CACHE.filter(s => s.id !== sessionId);
+    notifyDataChange();
+    console.log(`✅ Đã xóa session ${sessionId} khỏi Firestore`);
+  } catch (e: any) {
+    console.error('❌ Lỗi khi xóa session:', e?.code, e?.message, e);
+    alert('Không thể xóa session này. Vui lòng thử lại.');
+  }
 };
+
+export const getAppConfig = (): AppConfig => APP_CONFIG_CACHE;
 
 export const updateAppConfig = (config: AppConfig): void => {
   (async () => {
