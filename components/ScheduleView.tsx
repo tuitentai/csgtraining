@@ -19,7 +19,12 @@ const ScheduleView: React.FC = () => {
   const [editedSession, setEditedSession] = useState<TrainingSession | null>(null);
   const [swapMode, setSwapMode] = useState(false);
   const [swapSource, setSwapSource] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+
+  // ✅ Giữ lại chế độ hiển thị khi reload hoặc khi lưu
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>(() => {
+    return (localStorage.getItem('viewMode') as 'list' | 'calendar') || 'list';
+  });
+
   const [currentDate, setCurrentDate] = useState(new Date(2024, 11, 1)); // December 2024
 
   // ✅ Modal edit state
@@ -129,13 +134,13 @@ const ScheduleView: React.FC = () => {
     if (tempSession) setTempSession({ ...tempSession, [field]: value });
   };
 
-  // ✅ Giữ nguyên viewMode khi lưu
+  // ✅ Giữ nguyên viewMode khi lưu (không chuyển về danh sách)
   const handleSaveModal = () => {
     if (tempSession) {
       updateSession(tempSession);
       setSessions(prev => prev.map(s => (s.id === tempSession.id ? tempSession : s)));
     }
-    // Giữ nguyên viewMode
+    // Không reset viewMode
     setEditModal({ open: false, session: null });
     setTempSession(null);
   };
@@ -440,6 +445,7 @@ const ScheduleView: React.FC = () => {
           <button
             onClick={() => {
               setViewMode('list');
+              localStorage.setItem('viewMode', 'list');
               setSwapMode(false);
             }}
             className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium ${
@@ -451,6 +457,7 @@ const ScheduleView: React.FC = () => {
           <button
             onClick={() => {
               setViewMode('calendar');
+              localStorage.setItem('viewMode', 'calendar');
               setSwapMode(false);
             }}
             className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium ${
