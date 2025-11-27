@@ -169,8 +169,22 @@ const CurriculumManager: React.FC = () => {
                     <td className="px-6 py-4 align-top w-1/4">
                       <div className="font-bold text-slate-800 text-base mb-1">{session.topic}</div>
                       <div className="flex items-center gap-2 mb-2">
-                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide bg-slate-100 text-slate-500">
-                            {session.department}
+                        {/* 🔹 Badge màu cho từng Ban */}
+                        <span
+                          className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border hover:scale-[1.03] transition-transform duration-200
+                            ${
+                              session.department === Department.GENERAL
+                                ? 'bg-blue-50 text-blue-700 border-blue-200'
+                                : session.department === Department.MEDIA
+                                ? 'bg-purple-50 text-purple-700 border-purple-200'
+                                : session.department === Department.EVENT
+                                ? 'bg-orange-50 text-orange-700 border-orange-200'
+                                : session.department === Department.ER
+                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                : 'bg-slate-100 text-slate-500 border-slate-200'
+                            }`}
+                        >
+                          {session.department}
                         </span>
                       </div>
 
@@ -214,7 +228,7 @@ const CurriculumManager: React.FC = () => {
                         </div>
                       )}
                     </td>
-
+                    
                     {/* Deadline & Reviewer */}
                     <td className="px-6 py-4 align-top w-1/5">
                       <div className="space-y-3">
