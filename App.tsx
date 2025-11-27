@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import { ViewState, Status, AdminUser, AppConfig, AdminRole } from './types';
-import { getSessions, getAppConfig, getBoardMembers } from './services/dataService';
+import { getSessions, getAppConfig, getBoardMembers, subscribeDataChanges } from './services/dataService'; // 🔥 thêm subscribeDataChanges
 import BoardInfo from './components/BoardInfo';
 import CurriculumManager from './components/CurriculumManager';
 import ScheduleView from './components/ScheduleView';
@@ -21,6 +20,16 @@ const App: React.FC = () => {
   // Admin State
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
 
+  // 🔥 Thêm state để re-render khi Firestore có dữ liệu mới
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // 🔥 Đăng ký callback nhận thay đổi dữ liệu Firebase
+  useEffect(() => {
+    subscribeDataChanges(() => {
+      setRefreshKey(prev => prev + 1); // ép React render lại khi Firestore cập nhật
+    });
+  }, []);
+
   useEffect(() => {
     // Calculate simple stats for dashboard
     const sessions = getSessions();
@@ -34,7 +43,7 @@ const App: React.FC = () => {
     
     // Load config
     setAppConfig(getAppConfig());
-  }, [view]); // Recalculate when view changes
+  }, [view, refreshKey]); // 🔥 thêm refreshKey để tự cập nhật khi Firebase thay đổi
 
   const handleAdminLogin = (user: AdminUser) => {
     // Determine Role
@@ -338,10 +347,14 @@ const App: React.FC = () => {
 
       {/* Main Content */}
       <main className="flex-1 md:ml-72 p-4 md:p-10 pt-24 md:pt-10 transition-all duration-300 max-w-7xl mx-auto w-full">
-        {renderContent()}
+        {/* 🔥 Thêm key để đảm bảo mỗi lần Firestore đổi -> nội dung re-render lại ngay */}
+        <div key={refreshKey}>
+          {renderContent()}
+        </div>
       </main>
     </div>
   );
 };
 
 export default App;
+
