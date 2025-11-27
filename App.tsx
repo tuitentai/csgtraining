@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ViewState, Status, AdminUser, AppConfig, AdminRole } from './types';
-import { getSessions, getAppConfig, getBoardMembers, subscribeDataChanges } from './services/dataService'; // 🔥 thêm subscribeDataChanges
+import { getSessions, getAppConfig, getBoardMembers, subscribeDataChanges, waitForFirestoreReady } from './services/dataService'; // 🔥 thêm waitForFirestoreReady
 import BoardInfo from './components/BoardInfo';
 import CurriculumManager from './components/CurriculumManager';
 import ScheduleView from './components/ScheduleView';
@@ -30,20 +30,21 @@ const App: React.FC = () => {
     });
   }, []);
 
+  // 🔥 Đợi Firestore load lần đầu tiên, rồi mới tính toán stats & config
   useEffect(() => {
-    // Calculate simple stats for dashboard
-    const sessions = getSessions();
-    const approved = sessions.filter(s => s.status === Status.APPROVED).length;
-    const pending = sessions.filter(s => s.status === Status.PENDING).length;
-    setStats({
+    (async () => {
+      await waitForFirestoreReady(); // chờ Firestore sẵn sàng
+      const sessions = getSessions();
+      const approved = sessions.filter(s => s.status === Status.APPROVED).length;
+      const pending = sessions.filter(s => s.status === Status.PENDING).length;
+      setStats({
         total: sessions.length,
         approved,
         pending
-    });
-    
-    // Load config
-    setAppConfig(getAppConfig());
-  }, [view, refreshKey]); // 🔥 thêm refreshKey để tự cập nhật khi Firebase thay đổi
+      });
+      setAppConfig(getAppConfig());
+    })();
+  }, [view, refreshKey]);
 
   const handleAdminLogin = (user: AdminUser) => {
     // Determine Role
@@ -357,4 +358,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
