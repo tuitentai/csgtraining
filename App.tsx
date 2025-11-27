@@ -6,7 +6,7 @@ import {
   getBoardMembers,
   subscribeDataChanges,
   waitForFirestoreReady,
-} from './services/dataService'; // 🔥 thêm waitForFirestoreReady
+} from './services/dataService';
 import BoardInfo from './components/BoardInfo';
 import CurriculumManager from './components/CurriculumManager';
 import ScheduleView from './components/ScheduleView';
@@ -58,14 +58,14 @@ const App: React.FC = () => {
   // 🔥 Đăng ký callback nhận thay đổi dữ liệu Firebase
   useEffect(() => {
     subscribeDataChanges(() => {
-      setRefreshKey((prev) => prev + 1); // ép React render lại khi Firestore cập nhật
+      setRefreshKey((prev) => prev + 1);
     });
   }, []);
 
-  // 🔥 Đợi Firestore load lần đầu tiên, rồi mới tính toán stats & config
+  // 🔥 Đợi Firestore load lần đầu tiên
   useEffect(() => {
     (async () => {
-      await waitForFirestoreReady(); // chờ Firestore sẵn sàng
+      await waitForFirestoreReady();
       const sessions = getSessions();
       const approved = sessions.filter((s) => s.status === Status.APPROVED).length;
       const pending = sessions.filter((s) => s.status === Status.PENDING).length;
@@ -84,27 +84,18 @@ const App: React.FC = () => {
   }, [view]);
 
   const handleAdminLogin = (user: AdminUser) => {
-    // Determine Role
     let role: AdminRole | undefined = undefined;
 
-    // 1. Check Super Admin
     if (user.email === SUPER_ADMIN_EMAIL) {
       role = 'SUPER_ADMIN';
     } else {
-      // 2. Check if user is a Board Member
       const boardMembers = getBoardMembers();
       const isMember = boardMembers.find((m) => m.email === user.email);
-      if (isMember) {
-        role = 'MANAGER';
-      }
+      if (isMember) role = 'MANAGER';
     }
 
-    if (role) {
-      setAdminUser({ ...user, roleType: role });
-    } else {
-      // Logged in but unauthorized
-      setAdminUser({ ...user, roleType: undefined });
-    }
+    if (role) setAdminUser({ ...user, roleType: role });
+    else setAdminUser({ ...user, roleType: undefined });
   };
 
   const handleAdminLogout = () => {
@@ -231,16 +222,6 @@ const App: React.FC = () => {
                       <p className="text-xs text-slate-500 mt-1">13:30 - 17:00 • Phòng Học</p>
                     </div>
                   </div>
-                  <div className="flex gap-4 items-start p-3 rounded-lg bg-slate-50">
-                    <div className="bg-white border border-slate-200 rounded-lg p-2 text-center min-w-[60px]">
-                      <span className="block text-xs font-bold text-orange-600 uppercase">Tháng 12</span>
-                      <span className="block text-xl font-bold text-slate-800">07</span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-slate-800 text-sm">Training Ban Event & ER</h4>
-                      <p className="text-xs text-slate-500 mt-1">08:00 - 17:00 • Hall A & B</p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -255,71 +236,55 @@ const App: React.FC = () => {
       case 'guide':
         return <UserGuide />;
       case 'admin':
-        if (!adminUser) {
-          return <AdminLogin onLogin={handleAdminLogin} />;
-        }
-
-        // Access Control Check
-        if (!adminUser.roleType) {
+        if (!adminUser) return <AdminLogin onLogin={handleAdminLogin} />;
+        if (!adminUser.roleType)
           return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center p-4 animate-in zoom-in-95">
+            <div className="min-h-[60vh] flex flex-col items-center justify-center p-4">
               <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6">
                 <ShieldBan className="text-red-600" size={40} />
               </div>
               <h2 className="text-2xl font-bold text-slate-800 mb-2">Truy cập bị từ chối</h2>
-              <p className="text-slate-500 text-center max-w-md mb-8">
-                Tài khoản <span className="font-bold text-slate-800">{adminUser.email}</span> không nằm trong danh sách Ban
-                Điều Hành hoặc không có quyền quản trị.
-              </p>
               <button
                 onClick={handleAdminLogout}
-                className="flex items-center px-6 py-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:text-red-600 transition-colors"
+                className="flex items-center px-6 py-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:text-red-600"
               >
                 <LogOut className="mr-2" size={18} /> Đăng xuất
               </button>
             </div>
           );
-        }
         return <AdminPanel user={adminUser} onLogout={handleAdminLogout} />;
       default:
         return <div className="text-center p-10">404 - Not Found</div>;
     }
   };
 
-  // --- Sidebar + Mobile menu giữ nguyên ---
+  // --- Sidebar + Mobile + Bottom Nav ---
   return (
     <div className="min-h-screen bg-slate-50 flex font-sans">
       {/* Sidebar */}
-      <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-200 h-screen fixed top-0 left-0 z-30 shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+      <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-200 h-screen fixed top-0 left-0 z-30">
         <div className="p-8 flex items-center">
           <div className="mr-3">{renderLogo()}</div>
           <div>
-            <h1 className="font-bold text-xl text-slate-800 leading-tight line-clamp-1">{appConfig.title}</h1>
+            <h1 className="font-bold text-xl text-slate-800 leading-tight">{appConfig.title}</h1>
             <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{appConfig.subtitle}</p>
           </div>
         </div>
 
         <nav className="flex-1 px-4 space-y-1 mt-4">
-          <p className="px-4 text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Menu</p>
+          <p className="px-4 text-xs font-bold text-slate-400 uppercase mb-2">Menu</p>
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => setView(item.id as ViewState)}
-              className={`group flex items-center w-full px-4 py-3.5 rounded-xl transition-all duration-200 font-medium text-sm ${
+              className={`group flex items-center w-full px-4 py-3.5 rounded-xl font-medium text-sm ${
                 view === item.id
                   ? 'bg-orange-50 text-orange-600 shadow-sm ring-1 ring-orange-100'
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <span
-                className={`mr-3 transition-colors ${
-                  view === item.id ? 'text-orange-600' : 'text-slate-400 group-hover:text-slate-600'
-                }`}
-              >
-                {item.icon}
-              </span>
+              <span className={`mr-3 ${view === item.id ? 'text-orange-600' : 'text-slate-400'}`}>{item.icon}</span>
               {item.label}
-              {view === item.id && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-orange-500"></div>}
             </button>
           ))}
         </nav>
@@ -327,20 +292,42 @@ const App: React.FC = () => {
         <div className="p-4 border-t border-slate-100 space-y-2">
           <button
             onClick={() => setView('admin')}
-            className={`w-full flex items-center px-4 py-3 rounded-xl transition-all font-medium text-sm ${
+            className={`w-full flex items-center px-4 py-3 rounded-xl font-medium text-sm ${
               view === 'admin' ? 'bg-slate-800 text-white shadow-lg' : 'bg-slate-50 text-slate-600 hover:bg-slate-100'
             }`}
           >
-            <Settings size={18} className="mr-3" />
-            {adminUser && adminUser.email === SUPER_ADMIN_EMAIL ? 'CMS Admin' : 'Quản Trị Viên'}
+            <Settings size={18} className="mr-3" /> {adminUser ? 'CMS Admin' : 'Quản Trị Viên'}
           </button>
         </div>
       </aside>
 
-      {/* Mobile header + content giữ nguyên */}
-      <main className="flex-1 md:ml-72 p-4 md:p-10 pt-24 md:pt-10 transition-all duration-300 max-w-7xl mx-auto w-full">
+      {/* Main */}
+      <main className="flex-1 md:ml-72 p-4 md:p-10 pt-24 md:pt-10 max-w-7xl mx-auto w-full">
         <div key={refreshKey}>{renderContent()}</div>
       </main>
+
+      {/* 🧩 NEW: Bottom Navigation cho mobile */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] flex justify-around py-2 md:hidden z-40">
+        {[
+          { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Home' },
+          { id: 'curriculum', icon: <BookOpen size={20} />, label: 'Giáo án' },
+          { id: 'schedule', icon: <Calendar size={20} />, label: 'Lịch' },
+          { id: 'board', icon: <Info size={20} />, label: 'BCN' },
+          { id: 'guide', icon: <BookMarked size={20} />, label: 'Hướng dẫn' },
+          { id: 'admin', icon: <Settings size={20} />, label: 'Admin' },
+        ].map((item) => (
+          <button
+            key={item.id}
+            onClick={() => setView(item.id as ViewState)}
+            className={`flex flex-col items-center text-xs font-medium ${
+              view === item.id ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            {item.icon}
+            <span className="mt-1">{item.label}</span>
+          </button>
+        ))}
+      </div>
     </div>
   );
 };
