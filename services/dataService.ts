@@ -112,11 +112,9 @@ export const waitForFirestoreReady = async (): Promise<void> => {
 
     onSnapshot(query(sessionsCol), (snap) => {
       const arr: TrainingSession[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-      if (arr.length > 0) {
-        SESSIONS_CACHE = arr;
-        firestoreReady = true;
-        notifyDataChange();
-      }
+      SESSIONS_CACHE = arr; // ⚡ giữ đồng bộ toàn bộ realtime
+      firestoreReady = true;
+      notifyDataChange();
     });
 
     onSnapshot(configDoc, (d) => {
@@ -132,7 +130,7 @@ export const waitForFirestoreReady = async (): Promise<void> => {
 })();
 
 // ==============================
-// EXPORT HÀM (KHÔNG ĐỔI LOGIC)
+// EXPORT HÀM (CÓ CẬP NHẬT FIRESTORE)
 // ==============================
 
 export const getBoardMembers = (): BoardMember[] => BOARD_MEMBERS_CACHE;
@@ -176,6 +174,7 @@ export const updateSession = (session: TrainingSession): void => {
     try {
       await setDoc(doc(db, 'sessions', session.id), session, { merge: true });
       SESSIONS_CACHE = SESSIONS_CACHE.map(s => s.id === session.id ? session : s);
+      notifyDataChange();
     } catch (e: any) {
       console.error('updateSession error:', e?.code, e?.message, e);
       alert('Không thể lưu thay đổi session. Vui lòng thử lại.');
@@ -187,9 +186,21 @@ export const updateAllSessions = (sessions: TrainingSession[]): void => {
   (async () => {
     try {
       const batch = writeBatch(db);
+      const idsIncoming = new Set(sessions.map(s => s.id));
+
+      // Ghi hoặc cập nhật tất cả session còn lại
       sessions.forEach((s) => batch.set(doc(db, 'sessions', s.id), s));
+
+      // 🔥 Xóa những session cũ không còn trong danh sách (đảm bảo đồng bộ Firebase)
+      const existing = await getDocs(sessionsCol);
+      existing.forEach(d => {
+        if (!idsIncoming.has(d.id)) batch.delete(doc(db, 'sessions', d.id));
+      });
+
       await batch.commit();
       SESSIONS_CACHE = [...sessions];
+      notifyDataChange();
+      console.log('✅ updateAllSessions đã đồng bộ Firestore thành công.');
     } catch (e: any) {
       console.error('updateAllSessions error:', e?.code, e?.message, e);
       alert('Không thể cập nhật danh sách sessions lên cloud. Vui lòng thử lại.');
