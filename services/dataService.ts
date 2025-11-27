@@ -180,17 +180,24 @@ export const updateAllSessions = (sessions: TrainingSession[]): void => {
   })();
 };
 
-// Config (Dashboard)
-export const getAppConfig = (): AppConfig => APP_CONFIG_CACHE;
+// ✅ Đồng bộ AppConfig với Firestore
+export const getAppConfig = (): AppConfig => {
+  // Nếu Firestore chưa kịp trả snapshot, vẫn trả cache mặc định
+  return APP_CONFIG_CACHE;
+};
 
 export const updateAppConfig = (config: AppConfig): void => {
   (async () => {
     try {
+      // Ghi trực tiếp lên Firestore (document: config/main)
       await setDoc(configDoc, config, { merge: true });
+
+      // Cập nhật cache local để UI phản hồi tức thời
       APP_CONFIG_CACHE = { ...config };
+      console.log('✅ AppConfig updated to Firestore:', config);
     } catch (e: any) {
       console.error('updateAppConfig error:', e?.code, e?.message, e);
-      alert('Không thể lưu cấu hình. Vui lòng thử lại.');
+      alert('Không thể lưu cấu hình lên cloud. Vui lòng thử lại.');
     }
   })();
 };
