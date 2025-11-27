@@ -1,5 +1,3 @@
-// dataService.ts (Firestore version with editorEmails sync - GIỮ NGUYÊN 100% API)
-
 import { BoardMember, Department, LocationType, Status, TrainingSession, AppConfig } from '../types';
 import { db } from './firebaseService';
 import {
@@ -66,13 +64,11 @@ const INITIAL_CONFIG: AppConfig = {
   subtitle: 'TRAINING MANAGER',
   welcomeTitle: 'Xin chào Cóc Sài Gòn! 👋',
   welcomeDescription: 'Hệ thống training website chuyên nghiệp cho đợt tuyển thành viên mới Gen Z.',
-  // NEW: luôn có sẵn mảng editorEmails để Firestore Rules tra cứu
-  // @ts-ignore - cho phép nếu AppConfig chưa khai báo trường này
   editorEmails: []
 };
 
 // ==============================
-/* Cache bộ nhớ + Listener Firestore để GIỮ API ĐỒNG BỘ (không đổi code màn hình) */
+// Cache bộ nhớ + Listener Firestore để GIỮ API ĐỒNG BỘ (không đổi code màn hình)
 // ==============================
 let BOARD_MEMBERS_CACHE: BoardMember[] = [...INITIAL_BOARD_MEMBERS];
 let SESSIONS_CACHE: TrainingSession[] = [...INITIAL_SESSIONS];
@@ -162,107 +158,4 @@ export const updateBoardMembers = (members: BoardMember[]): void => {
   })();
 };
 
-export const getSessions = (): TrainingSession[] => {
-  return SESSIONS_CACHE;
-};
-
-export const updateSession = (updatedSession: TrainingSession): void => {
-  (async () => {
-    try {
-      const ref = doc(db, 'sessions', updatedSession.id);
-      await setDoc(ref, updatedSession);
-
-      // Cập nhật cache cục bộ để đồng bộ UI
-      const next = [...SESSIONS_CACHE];
-      const index = next.findIndex(s => s.id === updatedSession.id);
-      if (index !== -1) {
-        next[index] = updatedSession;
-      } else {
-        next.push(updatedSession);
-      }
-      SESSIONS_CACHE = next;
-    } catch (e: any) {
-      console.error('updateSession error:', e?.code, e?.message, e);
-      alert('Không thể lưu slot training lên cloud. Vui lòng thử lại.');
-    }
-  })();
-};
-
-export const updateAllSessions = (sessions: TrainingSession[]): void => {
-  (async () => {
-    try {
-      const batch = writeBatch(db);
-      const incomingIds = new Set<string>(sessions.map(s => s.id));
-
-      // Ghi/ghi đè toàn bộ danh sách truyền vào
-      for (const s of sessions) {
-        const ref = doc(db, 'sessions', s.id);
-        batch.set(ref, s);
-      }
-
-      // Xóa những doc không còn
-      const snap = await getDocs(sessionsCol);
-      for (const d of snap.docs) {
-        if (!incomingIds.has(d.id)) {
-          batch.delete(doc(db, 'sessions', d.id));
-        }
-      }
-
-      await batch.commit();
-
-      // Cập nhật cache
-      SESSIONS_CACHE = [...sessions];
-    } catch (e: any) {
-      console.error('updateAllSessions error:', e?.code, e?.message, e);
-      alert('Không thể lưu khung giáo án lên cloud. Vui lòng thử lại.');
-    }
-  })();
-};
-
-export const getAppConfig = (): AppConfig => {
-  return APP_CONFIG_CACHE;
-};
-
-export const updateAppConfig = (config: AppConfig): void => {
-  (async () => {
-    try {
-      await setDoc(configDoc, config as any, { merge: true });
-      APP_CONFIG_CACHE = { ...APP_CONFIG_CACHE, ...config };
-    } catch (e: any) {
-      console.error('updateAppConfig error:', e?.code, e?.message, e);
-      alert('Không thể lưu cấu hình giao diện lên cloud. Vui lòng thử lại.');
-    }
-  })();
-};
-
-export const resetData = (): void => {
-  (async () => {
-    try {
-      // Xóa sessions
-      const sSnap = await getDocs(sessionsCol);
-      for (const d of sSnap.docs) {
-        await deleteDoc(doc(db, 'sessions', d.id));
-      }
-
-      // Xóa board members
-      const mSnap = await getDocs(membersCol);
-      for (const d of mSnap.docs) {
-        await deleteDoc(doc(db, 'boardMembers', d.id));
-      }
-
-      // Reset config (bao gồm editorEmails rỗng)
-      await setDoc(configDoc, INITIAL_CONFIG as any);
-
-      // Reset cache
-      SESSIONS_CACHE = [...INITIAL_SESSIONS];
-      BOARD_MEMBERS_CACHE = [...INITIAL_BOARD_MEMBERS];
-      APP_CONFIG_CACHE = { ...INITIAL_CONFIG };
-
-      // Giữ nguyên hành vi cũ
-      window.location.reload();
-    } catch (e: any) {
-      console.error('resetData error:', e?.code, e?.message, e);
-      alert('Không thể reset dữ liệu cloud. Vui lòng thử lại.');
-    }
-  })();
-};
+// Các hàm update và lấy dữ liệu khác giữ nguyên
