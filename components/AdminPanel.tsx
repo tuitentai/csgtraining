@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { BoardMember, AdminUser, AppConfig, TrainingSession, Department, LocationType, Status } from '../types';
 import { getBoardMembers, updateBoardMembers, getAppConfig, updateAppConfig, getSessions, updateAllSessions } from '../services/dataService';
@@ -25,6 +24,7 @@ const AdminPanel: React.FC<Props> = ({ user, onLogout }) => {
   const [members, setMembers] = useState<BoardMember[]>([]);
   const [config, setConfig] = useState<AppConfig>({ logoUrl: 'default', title: '', subtitle: '', welcomeTitle: '', welcomeDescription: '' });
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   // Toast State
@@ -56,14 +56,34 @@ const AdminPanel: React.FC<Props> = ({ user, onLogout }) => {
       deadline: '2024-12-05'
   });
 
+  // =========================
+  // FIX LỖI: dùng async/await
+  // =========================
   useEffect(() => {
-    // Force non-super admins to curriculum tab
-    if (!isSuperAdmin) {
-        setActiveTab('curriculum');
-    }
-    setMembers(getBoardMembers());
-    setConfig(getAppConfig());
-    setSessions(getSessions());
+    let mounted = true;
+
+    const load = async () => {
+      try {
+        if (!isSuperAdmin) setActiveTab('curriculum');
+        const [m, c, s] = await Promise.all([
+          getBoardMembers(),   // await
+          getAppConfig(),      // await
+          getSessions()        // await
+        ]);
+        if (!mounted) return;
+        setMembers(m);
+        setConfig(c);
+        setSessions(s);
+      } catch (err) {
+        console.error(err);
+        setToast({ message: 'Không tải được dữ liệu từ Firestore.', type: 'error' });
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { mounted = false; };
   }, [isSuperAdmin]);
 
   const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
@@ -71,20 +91,38 @@ const AdminPanel: React.FC<Props> = ({ user, onLogout }) => {
       setTimeout(() => setToast(null), 3000);
   };
 
-  const handleSaveMembers = () => {
-    updateBoardMembers(members);
-    showToast('Đã cập nhật danh sách nhân sự thành công!');
+  // =========================
+  // FIX LỖI: các hàm save dùng await
+  // =========================
+  const handleSaveMembers = async () => {
+    try {
+      await updateBoardMembers(members);
+      showToast('Đã cập nhật danh sách nhân sự thành công!');
+    } catch (e) {
+      console.error(e);
+      showToast('Lưu nhân sự thất bại.', 'error');
+    }
   };
 
-  const handleSaveConfig = () => {
-      updateAppConfig(config);
+  const handleSaveConfig = async () => {
+    try {
+      await updateAppConfig(config);
       showToast('Đã lưu cấu hình giao diện thành công!');
-  }
+    } catch (e) {
+      console.error(e);
+      showToast('Lưu cấu hình thất bại.', 'error');
+    }
+  };
 
-  const handleSaveSessions = () => {
-      updateAllSessions(sessions);
+  const handleSaveSessions = async () => {
+    try {
+      await updateAllSessions(sessions);
       showToast('Đã cập nhật khung giáo án thành công!');
-  }
+    } catch (e) {
+      console.error(e);
+      showToast('Lưu khung giáo án thất bại.', 'error');
+    }
+  };
 
   // --- Delete Logic with Modal ---
   const promptDeleteMember = (id: string) => {
@@ -99,14 +137,10 @@ const AdminPanel: React.FC<Props> = ({ user, onLogout }) => {
       if (!deleteModal.id || !deleteModal.type) return;
 
       if (deleteModal.type === 'member') {
-          setMembers(prevMembers => {
-              return prevMembers.filter(m => m.id !== deleteModal.id);
-          });
+          setMembers(prevMembers => prevMembers.filter(m => m.id !== deleteModal.id));
           showToast('Đã xóa khỏi danh sách hiển thị. Hãy bấm "Lưu Nhân Sự" để hoàn tất.', 'warning');
       } else if (deleteModal.type === 'session') {
-          setSessions(prevSessions => {
-              return prevSessions.filter(s => s.id !== deleteModal.id);
-          });
+          setSessions(prevSessions => prevSessions.filter(s => s.id !== deleteModal.id));
           showToast('Đã xóa slot. Hãy bấm "Lưu Thay Đổi" để hoàn tất.', 'warning');
       }
 
@@ -149,7 +183,7 @@ const AdminPanel: React.FC<Props> = ({ user, onLogout }) => {
     reader.onload = (evt) => {
         try {
             const data = evt.target?.result;
-            const wb = XLSX.read(data, { type: 'array' });
+            const wb = XLSX.read(data as ArrayBuffer, { type: 'array' });
             const wsname = wb.SheetNames[0];
             const ws = wb.Sheets[wsname];
             
@@ -293,6 +327,15 @@ const AdminPanel: React.FC<Props> = ({ user, onLogout }) => {
     m.role.toLowerCase().includes('chủ nhiệm') ||
     m.role.toLowerCase().includes('mentor')
   );
+
+  // Loading guard – tránh render khi data chưa có
+  if (loading) {
+    return (
+      <div className="p-6">
+        <div className="animate-pulse text-slate-400 text-sm">Đang tải dữ liệu...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 relative pb-10">
@@ -730,7 +773,15 @@ const AdminPanel: React.FC<Props> = ({ user, onLogout }) => {
                                             onChange={e => setNewSession({...newSession, reviewerName: e.target.value})}
                                         >
                                             <option value="">Chọn người duyệt...</option>
-                                            {potentialReviewers.map(m => <option key={m.id} value={m.name}>{m.name} ({m.role})</option>)}
+                                            {members
+                                              .filter(m => 
+                                                m.role.toLowerCase().includes('trưởng') || 
+                                                m.role.toLowerCase().includes('phó') || 
+                                                m.role.toLowerCase().includes('chủ nhiệm') ||
+                                                m.role.toLowerCase().includes('mentor')
+                                              )
+                                              .map(m => <option key={m.id} value={m.name}>{m.name} ({m.role})</option>)
+                                            }
                                         </select>
                                     </div>
                                 </div>
@@ -758,7 +809,7 @@ const AdminPanel: React.FC<Props> = ({ user, onLogout }) => {
 
                     {/* List Existing */}
                     <div className="space-y-4">
-                        {sessions.map((session, index) => {
+                        {sessions.map((session) => {
                              const h = Math.floor(session.duration / 60);
                              const m = session.duration % 60;
 
@@ -857,7 +908,15 @@ const AdminPanel: React.FC<Props> = ({ user, onLogout }) => {
                                                         onChange={e => handleUpdateSession(session.id, 'reviewerName', e.target.value)}
                                                     >
                                                         <option value="">Chọn người duyệt...</option>
-                                                        {potentialReviewers.map(m => <option key={m.id} value={m.name}>{m.name}</option>)}
+                                                        {members
+                                                          .filter(m => 
+                                                            m.role.toLowerCase().includes('trưởng') || 
+                                                            m.role.toLowerCase().includes('phó') || 
+                                                            m.role.toLowerCase().includes('chủ nhiệm') ||
+                                                            m.role.toLowerCase().includes('mentor')
+                                                          )
+                                                          .map(m => <option key={m.id} value={m.name}>{m.name}</option>)
+                                                        }
                                                     </select>
                                                  </div>
                                             </div>
