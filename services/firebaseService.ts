@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
+// Firebase configuration từ môi trường VITE
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
   authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -13,7 +14,7 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
-// DEBUG: in ra xem env có “tới” không
+// Debugging: in ra cấu hình để chắc chắn rằng env đang được "tới"
 console.log('[FirebaseConfig]', {
   apiKey: !!firebaseConfig.apiKey,
   authDomain: firebaseConfig.authDomain,
@@ -24,10 +25,12 @@ console.log('[FirebaseConfig]', {
   measurementId: firebaseConfig.measurementId,
 });
 
-// Khởi tạo app Firebase
+// Khởi tạo Firebase app với cấu hình
 const app = initializeApp(firebaseConfig);
 
-// Export các dịch vụ bạn cần dùng
-export const db = getFirestore(app);
-export const auth = getAuth(app);
-export const provider = new GoogleAuthProvider();
+// Lấy các dịch vụ cần thiết
+export const db = getFirestore(app);  // Firestore instance
+export const auth = getAuth(app);      // Firebase Auth instance
+export const provider = new GoogleAuthProvider();  // Google sign-in provider
+
+// Xuất các dịch vụ này để sử dụng ở các nơi khác trong ứng dụng
