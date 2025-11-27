@@ -79,9 +79,10 @@ const sessionsCol = collection(db, 'sessions');
 const configDoc = doc(db, 'config', 'main');
 
 // ==============================
-// 🔔 THÊM HỆ THỐNG THÔNG BÁO KHI FIRESTORE CẬP NHẬT DỮ LIỆU
+// 🔔 HỆ THỐNG THÔNG BÁO + CỜ ĐỒNG BỘ FIRESTORE
 // ==============================
 let onDataChangeCallback: (() => void) | null = null;
+let firestoreReady = false; // 🔥 thêm cờ trạng thái
 
 export const subscribeDataChanges = (callback: () => void) => {
   onDataChangeCallback = callback;
@@ -93,6 +94,21 @@ function notifyDataChange() {
   }
 }
 
+// 🔥 Hàm chờ Firestore load lần đầu (App sẽ gọi)
+export const waitForFirestoreReady = async (): Promise<void> => {
+  return new Promise((resolve) => {
+    if (firestoreReady) resolve();
+    else {
+      const check = setInterval(() => {
+        if (firestoreReady) {
+          clearInterval(check);
+          resolve();
+        }
+      }, 100);
+    }
+  });
+};
+
 // Khởi động listener ngay khi module được import
 (function initFirestoreSubscriptions() {
   try {
@@ -101,7 +117,8 @@ function notifyDataChange() {
       const arr: BoardMember[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
       if (arr.length > 0) {
         BOARD_MEMBERS_CACHE = arr;
-        notifyDataChange(); // 🔥 thêm dòng này
+        firestoreReady = true; // 🔥 đánh dấu đã có dữ liệu
+        notifyDataChange();
       }
     });
 
@@ -110,7 +127,8 @@ function notifyDataChange() {
       const arr: TrainingSession[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
       if (arr.length > 0) {
         SESSIONS_CACHE = arr;
-        notifyDataChange(); // 🔥 thêm dòng này
+        firestoreReady = true; // 🔥 đánh dấu đã có dữ liệu
+        notifyDataChange();
       }
     });
 
@@ -118,7 +136,8 @@ function notifyDataChange() {
     onSnapshot(configDoc, (d) => {
       if (d.exists()) {
         APP_CONFIG_CACHE = { ...INITIAL_CONFIG, ...(d.data() as any) };
-        notifyDataChange(); // 🔥 thêm dòng này
+        firestoreReady = true; // 🔥 đánh dấu đã có dữ liệu
+        notifyDataChange();
       }
     });
   } catch (e) {
@@ -164,10 +183,6 @@ export const updateBoardMembers = (members: BoardMember[]): void => {
     }
   })();
 };
-
-// ==============================
-// ✅ THÊM EXPORT HỢP LỆ CHO CurriculumManager
-// ==============================
 
 // Hàm lấy sessions (đồng bộ cache)
 export const getSessions = (): TrainingSession[] => {
