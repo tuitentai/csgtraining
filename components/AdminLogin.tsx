@@ -15,6 +15,13 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
     if(!email) return;
 
     setIsLoading(true);
+
+    // ❗ DANH SÁCH SUPER ADMIN
+    const superAdmins = [
+      "thanhtailai2003@gmail.com",   // Email của bạn
+      "cocsaga@fpt.edu.vn"           // Bạn muốn thêm ai thì thêm ở đây
+    ];
+
     // Simulating Google Login delay and extracting user info
     setTimeout(() => {
       setIsLoading(false);
@@ -25,20 +32,19 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
           name = email.split('@')[0];
       }
 
-      // ❗ Danh sách SUPER ADMIN
-      const superAdmins = [
-        "thanhtailai2003@gmail.com",   // Email của bạn
-        "cocsaga@fpt.edu.vn"            // Bạn muốn thêm ai thì thêm ở đây
-      ];
+      // ❗ GÁN ROLE CHO ADMIN
+      const assignedRole = superAdmins.includes(email)
+        ? "SUPER_ADMIN"
+        : "MANAGER";
 
+      // ❗ GIỮ NGUYÊN LOGIC onLogin, CHỈ THÊM roleType
       onLogin({
         email: email,
         name: name,
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fff`,
-        roleType: email === "thanhtailai2003@gmail.com" ? "SUPER_ADMIN" : "MANAGER"
+        roleType: assignedRole
       });
 
-    
     }, 1000);
   };
 
