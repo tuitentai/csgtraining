@@ -12,29 +12,23 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
+    if(!email) return;
 
     setIsLoading(true);
-
-    // Kiểm tra nếu email là của người có quyền cao nhất (admin)
+    // Simulating Google Login delay and extracting user info
     setTimeout(() => {
       setIsLoading(false);
-
+      
+      // Determine name based on email for demo purposes
       let name = 'User';
       if (email.includes('@')) {
           name = email.split('@')[0];
       }
 
-      // Quyền của người dùng dựa trên email
-      const isSuperAdmin = email === 'thanhtailai2003@gmail.com'; // Email quản trị viên cao nhất
-      const isEditor = ['mentor@cocsaigon.vn', 'truongban@cocsaigon.vn', 'phoban@cocsaigon.vn'].includes(email); // Các email có quyền chỉnh sửa
-
-      // Tạo user object với quyền hạn
       onLogin({
         email: email,
         name: name,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fff`,
-        roleType: isSuperAdmin ? 'SUPER_ADMIN' : (isEditor ? 'EDITOR' : 'USER'), // Phân quyền cho admin và editor
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fff`
       });
     }, 1000);
   };
@@ -50,9 +44,10 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
             <p className="text-slate-400 text-sm mt-1">Hệ thống quản trị tập trung</p>
         </div>
         <div className="p-8">
+          
           <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Email</label>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Google Email</label>
                   <div className="relative group">
                       <Mail className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={18}/>
                       <input 
@@ -74,7 +69,7 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
                 {isLoading ? (
                   <Loader2 className="animate-spin mr-2" size={20} />
                 ) : null}
-                {isLoading ? 'Đang xác thực...' : 'Đăng Nhập'}
+                {isLoading ? 'Đang xác thực...' : 'Đăng Nhập với Google'}
               </button>
           </form>
 
