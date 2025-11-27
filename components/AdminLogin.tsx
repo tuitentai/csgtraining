@@ -25,12 +25,20 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
           name = email.split('@')[0];
       }
 
+      // ❗ Danh sách SUPER ADMIN
+      const superAdmins = [
+        "thanhtailai2003@gmail.com",   // Email của bạn
+        "cocsaga@fpt.edu.vn"            // Bạn muốn thêm ai thì thêm ở đây
+      ];
+
       onLogin({
         email: email,
         name: name,
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fff`,
         roleType: email === "thanhtailai2003@gmail.com" ? "SUPER_ADMIN" : "MANAGER"
       });
+
+    
     }, 1000);
   };
 
