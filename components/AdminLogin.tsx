@@ -28,7 +28,8 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
       onLogin({
         email: email,
         name: name,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fff`
+        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fff`,
+        roleType: email === "thanhtailai2003@gmail.com" ? "SUPER_ADMIN" : "MANAGER"
       });
     }, 1000);
   };
