@@ -13,6 +13,17 @@ const firebaseConfig = {
   measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
+// DEBUG: in ra xem env có “tới” không
+console.log('[FirebaseConfig]', {
+  apiKey: !!firebaseConfig.apiKey,
+  authDomain: firebaseConfig.authDomain,
+  projectId: firebaseConfig.projectId,
+  storageBucket: firebaseConfig.storageBucket,
+  messagingSenderId: firebaseConfig.messagingSenderId,
+  appId: firebaseConfig.appId,
+  measurementId: firebaseConfig.measurementId,
+});
+
 // Khởi tạo app Firebase
 const app = initializeApp(firebaseConfig);
 
