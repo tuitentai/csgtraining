@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { AdminUser } from '../types';
 import { Lock, Loader2, Mail, ShieldAlert } from 'lucide-react';
+import { signInWithPopup } from 'firebase/auth';
+import { auth, provider } from '../services/firebaseService';  // Import Firebase Auth
 
 interface Props {
   onLogin: (user: AdminUser) => void;
@@ -8,29 +10,29 @@ interface Props {
 
 const AdminLogin: React.FC<Props> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [email, setEmail] = useState('');
 
-  const handleLogin = (e: React.FormEvent) => {
+  // Thay đổi từ email thủ công sang đăng nhập Firebase
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if(!email) return;
-
     setIsLoading(true);
-    // Simulating Google Login delay and extracting user info
-    setTimeout(() => {
-      setIsLoading(false);
-      
-      // Determine name based on email for demo purposes
-      let name = 'User';
-      if (email.includes('@')) {
-          name = email.split('@')[0];
-      }
 
+    try {
+      // Sign-in using Google
+      const res = await signInWithPopup(auth, provider);
+      const u = res.user;
+      
+      // Lấy thông tin người dùng và call onLogin
       onLogin({
-        email: email,
-        name: name,
-        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=0f172a&color=fff`
+        email: (u.email || '').toLowerCase(),
+        name: u.displayName || 'User',
+        avatar: u.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(u.displayName || 'User')}&background=0f172a&color=fff`
       });
-    }, 1000);
+    } catch (err) {
+      console.error(err);
+      alert('Đăng nhập thất bại. Vui lòng thử lại.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -44,7 +46,6 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
             <p className="text-slate-400 text-sm mt-1">Hệ thống quản trị tập trung</p>
         </div>
         <div className="p-8">
-          
           <form onSubmit={handleLogin} className="space-y-5">
               <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Google Email</label>
@@ -53,8 +54,6 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
                       <input 
                         type="email"
                         required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
                         placeholder="example@cocsaigon.vn"
                         className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-slate-800 focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-50 outline-none transition-all font-medium"
                       />
