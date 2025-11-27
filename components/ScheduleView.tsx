@@ -186,7 +186,6 @@ const ScheduleView: React.FC = () => {
             const isEditing = editingId === session.id;
             const currentData = isEditing && editedSession ? editedSession : session;
 
-            // 🌈 Chọn màu theo Ban
             const deptColor =
               session.department === Department.MEDIA
                 ? 'border-l-4 border-l-purple-400'
@@ -224,7 +223,6 @@ const ScheduleView: React.FC = () => {
                       )}
                     </div>
 
-                    {/* 🔹 Badge màu phân loại */}
                     <span
                       className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full border ${
                         session.department === Department.GENERAL
@@ -373,16 +371,20 @@ const ScheduleView: React.FC = () => {
               size={18}
               className={`mr-2 ${swapMode ? 'rotate-180' : ''}`}
             />
-            {swapMode ? 'Đang bật Đổi lịch' : 'Đổi lịch'}
+            {swapMode ? "Đang bật Đổi lịch": "Đổi lịch"}
           </button>
-          </div>
+        )}
+
+      </div>
 
       {swapMode && viewMode === 'list' && (
         <div className="bg-blue-50 border border-blue-100 text-blue-800 p-4 rounded-xl text-sm flex items-center justify-center">
           <div className="bg-white p-2 rounded-full mr-3 shadow-sm text-blue-600">
             <ArrowRightLeft size={16}/>
           </div>
-          {swapSource ? 'Bước 2: Chọn slot thứ hai để hoán đổi vị trí.' : 'Bước 1: Chọn slot đầu tiên bạn muốn đổi lịch.'}
+          {swapSource
+            ? "Bước 2: Chọn slot thứ hai để hoán đổi vị trí."
+            : "Bước 1: Chọn slot đầu tiên bạn muốn đổi lịch."}
         </div>
       )}
 
