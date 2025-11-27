@@ -143,6 +143,7 @@ const ScheduleView: React.FC = () => {
     setTempSession(null);
   };
 
+  // ================== CALENDAR VIEW ==================
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
@@ -240,7 +241,7 @@ const ScheduleView: React.FC = () => {
           <div className="grid grid-cols-7 bg-slate-100 gap-px border-l border-slate-100">{days}</div>
         </div>
 
-        {/* 🔹 Modal chỉnh sửa */}
+        {/* 🔹 Modal chỉnh sửa - chỉ chỉnh giờ và thời lượng */}
         {editModal.open && tempSession && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
             <div className="bg-white rounded-xl shadow-lg w-[320px] p-5 space-y-3">
@@ -260,14 +261,6 @@ const ScheduleView: React.FC = () => {
                   type="number"
                   value={tempSession.duration}
                   onChange={e => handleModalChange('duration', Number(e.target.value))}
-                  className="w-full border rounded p-2 text-sm"
-                />
-
-                <label className="block text-slate-600 font-medium mt-2">Địa điểm</label>
-                <input
-                  type="text"
-                  value={tempSession.locationDetail || ''}
-                  onChange={e => handleModalChange('locationDetail', e.target.value)}
                   className="w-full border rounded p-2 text-sm"
                 />
               </div>
@@ -293,7 +286,7 @@ const ScheduleView: React.FC = () => {
     );
   };
 
-  // 🧾 List View
+  // ================== LIST VIEW ==================
   const renderDaySchedule = (dateStr: string) => {
     const daySessions = sessions.filter(s => s.date === dateStr);
     const dateObj = new Date(dateStr);
@@ -399,40 +392,9 @@ const ScheduleView: React.FC = () => {
                       >
                         {currentData.locationType === LocationType.HALL ? <Users size={14} /> : <MapPin size={14} />}
                       </div>
-                      {isEditing ? (
-                        <div className="flex flex-col gap-2">
-                          <select
-                            value={currentData.locationType}
-                            onChange={e => handleEditChange('locationType', e.target.value)}
-                            className="bg-slate-50 border rounded p-1 text-xs"
-                          >
-                            <option value={LocationType.CLASSROOM}>{LocationType.CLASSROOM}</option>
-                            <option value={LocationType.HALL}>{LocationType.HALL}</option>
-                          </select>
-                          {currentData.locationType === LocationType.HALL ? (
-                            <select
-                              value={currentData.locationDetail}
-                              onChange={e => handleEditChange('locationDetail', e.target.value)}
-                              className="bg-slate-50 border rounded p-1 text-xs w-24"
-                            >
-                              <option value="Hall A">Hall A</option>
-                              <option value="Hall B">Hall B</option>
-                            </select>
-                          ) : (
-                            <input
-                              type="text"
-                              placeholder="Số phòng..."
-                              value={currentData.locationDetail}
-                              onChange={e => handleEditChange('locationDetail', e.target.value)}
-                              className="bg-slate-50 border rounded p-1 text-xs w-24"
-                            />
-                          )}
-                        </div>
-                      ) : (
-                        <span>
-                          {session.locationType} {session.locationDetail && `• ${session.locationDetail}`}
-                        </span>
-                      )}
+                      <span>
+                        {session.locationType} {session.locationDetail && `• ${session.locationDetail}`}
+                      </span>
                     </div>
 
                     {!swapMode && (
@@ -499,10 +461,15 @@ const ScheduleView: React.FC = () => {
               setSwapSource(null);
             }}
             className={`flex items-center px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm ml-auto ${
-              swapMode ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-white border text-slate-700'
+              swapMode
+                ? 'bg-blue-600 text-white ring-4 ring-blue-100'
+                : 'bg-white border text-slate-700'
             }`}
           >
-            <ArrowRightLeft size={18} className={`mr-2 ${swapMode ? 'rotate-180' : ''}`} />
+            <ArrowRightLeft
+              size={18}
+              className={`mr-2 ${swapMode ? 'rotate-180' : ''}`}
+            />
             {swapMode ? 'Đang bật Đổi lịch' : 'Đổi lịch'}
           </button>
         )}
@@ -513,7 +480,9 @@ const ScheduleView: React.FC = () => {
           <div className="bg-white p-2 rounded-full mr-3 shadow-sm text-blue-600">
             <ArrowRightLeft size={16} />
           </div>
-          {swapSource ? 'Bước 2: Chọn slot thứ hai để hoán đổi vị trí.' : 'Bước 1: Chọn slot đầu tiên bạn muốn đổi lịch.'}
+          {swapSource
+            ? 'Bước 2: Chọn slot thứ hai để hoán đổi vị trí.'
+            : 'Bước 1: Chọn slot đầu tiên bạn muốn đổi lịch.'}
         </div>
       )}
 
@@ -529,4 +498,3 @@ const ScheduleView: React.FC = () => {
 };
 
 export default ScheduleView;
-                        
