@@ -25,7 +25,10 @@ const ScheduleView: React.FC = () => {
     return (localStorage.getItem('viewMode') as 'list' | 'calendar') || 'list';
   });
 
-  const [currentDate, setCurrentDate] = useState(new Date(2024, 11, 1)); // December 2024
+  const [currentDate, setCurrentDate] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
 
   // ✅ Modal edit state
   const [editModal, setEditModal] = useState<{ open: boolean; session?: TrainingSession | null }>({
