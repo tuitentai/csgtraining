@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import { TrainingSession, Status, Department, BoardMember } from '../types';
-import { getSessions, updateSession, getBoardMembers } from '../services/dataService';
-import { Edit2, Save, ExternalLink, CheckCircle2, Clock, AlertCircle, Sparkles, ChevronDown, ListFilter, Calendar, Timer } from 'lucide-react';
+import { getSessions, updateSession, getBoardMembers, deleteSession } from '../services/dataService';
+import { Edit2, Save, Trash2, ExternalLink, CheckCircle2, Clock, AlertCircle, Sparkles, ChevronDown, ListFilter, Calendar, Timer } from 'lucide-react';
 import GeminiAssistant from './GeminiAssistant';
 
 const CurriculumManager: React.FC = () => {
@@ -38,16 +37,28 @@ const CurriculumManager: React.FC = () => {
     }
   };
 
+  const handleDeleteClick = async (id: string) => {
+    const confirmDelete = window.confirm('Bạn có chắc muốn xóa giáo án này không?');
+    if (confirmDelete) {
+      try {
+        await deleteSession(id);
+        setSessions(prev => prev.filter(s => s.id !== id));
+      } catch (error) {
+        alert('Không thể xóa giáo án. Vui lòng thử lại.');
+        console.error('Delete error:', error);
+      }
+    }
+  };
+
   const handleChange = (field: keyof TrainingSession, value: any) => {
     setEditForm(prev => ({ ...prev, [field]: value }));
   };
 
   const openAiHelper = (topic: string, requirements: string) => {
-      setAiContext({ topic, reqs: requirements });
-      setIsAiOpen(true);
+    setAiContext({ topic, reqs: requirements });
+    setIsAiOpen(true);
   };
 
-  // Helper to format date DD-MM-YYYY
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -55,7 +66,6 @@ const CurriculumManager: React.FC = () => {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
-  // Filter reviewers based on role
   const potentialReviewers = boardMembers.filter(m => 
     m.role.toLowerCase().includes('trưởng') || 
     m.role.toLowerCase().includes('phó') || 
@@ -77,30 +87,29 @@ const CurriculumManager: React.FC = () => {
   };
 
   const formatDuration = (minutes: number) => {
-      const h = Math.floor(minutes / 60);
-      const m = minutes % 60;
-      if (h > 0 && m > 0) return `${h}h ${m}p`;
-      if (h > 0) return `${h}h`;
-      return `${m}p`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    if (h > 0 && m > 0) return `${h}h ${m}p`;
+    if (h > 0) return `${h}h`;
+    return `${m}p`;
   };
 
   const checkDeadlineStatus = (deadline: string, status: Status) => {
-      if (!deadline) return null;
-      if (status === Status.APPROVED) return <span className="text-[10px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded ml-2">Đúng hạn</span>;
-      
-      const today = new Date();
-      const deadlineDate = new Date(deadline);
-      // Reset time to start of day for accurate comparison
-      today.setHours(0,0,0,0);
-      deadlineDate.setHours(0,0,0,0);
+    if (!deadline) return null;
+    if (status === Status.APPROVED) return <span className="text-[10px] text-green-600 font-bold bg-green-50 px-1.5 py-0.5 rounded ml-2">Đúng hạn</span>;
+    
+    const today = new Date();
+    const deadlineDate = new Date(deadline);
+    today.setHours(0,0,0,0);
+    deadlineDate.setHours(0,0,0,0);
 
-      if (today > deadlineDate) {
-          return <span className="text-[10px] text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded ml-2">Trễ hạn</span>;
-      }
-      if (today.getTime() === deadlineDate.getTime()) {
-        return <span className="text-[10px] text-orange-600 font-bold bg-orange-50 px-1.5 py-0.5 rounded ml-2">Hôm nay</span>;
-      }
-      return null;
+    if (today > deadlineDate) {
+      return <span className="text-[10px] text-red-600 font-bold bg-red-50 px-1.5 py-0.5 rounded ml-2">Trễ hạn</span>;
+    }
+    if (today.getTime() === deadlineDate.getTime()) {
+      return <span className="text-[10px] text-orange-600 font-bold bg-orange-50 px-1.5 py-0.5 rounded ml-2">Hôm nay</span>;
+    }
+    return null;
   };
 
   const filteredSessions = activeTab === 'ALL' 
@@ -329,23 +338,34 @@ const CurriculumManager: React.FC = () => {
 
                     {/* Actions */}
                     <td className="px-6 py-4 align-middle text-center w-24">
-                      {isEditing ? (
-                        <button 
-                          onClick={handleSaveClick}
-                          className="w-10 h-10 flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 hover:scale-110 transition-all mx-auto shadow-sm"
-                          title="Lưu thay đổi"
+                      <div className="flex items-center justify-center gap-2">
+                        {isEditing ? (
+                          <button 
+                            onClick={handleSaveClick}
+                            className="w-9 h-9 flex items-center justify-center rounded-full bg-green-50 text-green-600 hover:bg-green-100 hover:scale-110 transition-all shadow-sm"
+                            title="Lưu thay đổi"
+                          >
+                            <Save size={17} />
+                          </button>
+                        ) : (
+                          <button 
+                            onClick={() => handleEditClick(session)}
+                            className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-400 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 hover:shadow-md transition-all"
+                            title="Chỉnh sửa"
+                          >
+                            <Edit2 size={15} />
+                          </button>
+                        )}
+
+                        {/* 🗑 Nút xóa mới thêm */}
+                        <button
+                          onClick={() => handleDeleteClick(session.id)}
+                          className="w-9 h-9 flex items-center justify-center rounded-full bg-white border border-slate-200 text-red-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 hover:shadow-md transition-all"
+                          title="Xóa giáo án"
                         >
-                          <Save size={18} />
+                          <Trash2 size={15} />
                         </button>
-                      ) : (
-                        <button 
-                          onClick={() => handleEditClick(session)}
-                          className="w-10 h-10 flex items-center justify-center rounded-full bg-white border border-slate-200 text-slate-400 hover:text-orange-600 hover:border-orange-200 hover:bg-orange-50 hover:shadow-md transition-all mx-auto"
-                          title="Chỉnh sửa"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 );
