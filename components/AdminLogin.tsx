@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AdminUser } from '../types';
-import { Lock, Loader2, Mail, ShieldAlert } from 'lucide-react';
+import { Lock, Loader2, ShieldAlert } from 'lucide-react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, provider } from '../services/firebaseService';  // Import Firebase Auth
 
@@ -11,17 +11,17 @@ interface Props {
 const AdminLogin: React.FC<Props> = ({ onLogin }) => {
   const [isLoading, setIsLoading] = useState(false);
 
-  // Thay đổi từ email thủ công sang đăng nhập Firebase
+  // Chức năng đăng nhập qua Google
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Sign-in using Google
+      // Firebase Sign-in with Google
       const res = await signInWithPopup(auth, provider);
       const u = res.user;
       
-      // Lấy thông tin người dùng và call onLogin
+      // Truyền thông tin người dùng vào onLogin
       onLogin({
         email: (u.email || '').toLowerCase(),
         name: u.displayName || 'User',
@@ -46,20 +46,8 @@ const AdminLogin: React.FC<Props> = ({ onLogin }) => {
             <p className="text-slate-400 text-sm mt-1">Hệ thống quản trị tập trung</p>
         </div>
         <div className="p-8">
+          {/* Đăng nhập bằng Google */}
           <form onSubmit={handleLogin} className="space-y-5">
-              <div>
-                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2">Google Email</label>
-                  <div className="relative group">
-                      <Mail className="absolute left-3 top-3.5 text-slate-400 group-focus-within:text-orange-500 transition-colors" size={18}/>
-                      <input 
-                        type="email"
-                        required
-                        placeholder="example@cocsaigon.vn"
-                        className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-slate-800 focus:bg-white focus:border-orange-500 focus:ring-4 focus:ring-orange-50 outline-none transition-all font-medium"
-                      />
-                  </div>
-              </div>
-
               <button
                 type="submit"
                 disabled={isLoading}
