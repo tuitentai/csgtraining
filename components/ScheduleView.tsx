@@ -1,7 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { TrainingSession, LocationType, Department } from '../types';
 import { getSessions, updateSession } from '../services/dataService';
-import { Calendar as CalendarIcon, MapPin, Clock, ArrowRightLeft, User, Users, List, ChevronLeft, ChevronRight } from 'lucide-react';
+import {
+  Calendar as CalendarIcon,
+  MapPin,
+  Clock,
+  ArrowRightLeft,
+  User,
+  Users,
+  List,
+  ChevronLeft,
+  ChevronRight,
+} from 'lucide-react';
 
 const ScheduleView: React.FC = () => {
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
@@ -27,7 +37,7 @@ const ScheduleView: React.FC = () => {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
-  // 🕒 Tính giờ kết thúc dựa trên giờ bắt đầu + thời lượng
+  // 🕒 Hàm tính giờ kết thúc dựa trên giờ bắt đầu + thời lượng
   const calculateEndTime = (startTime: string, duration: number) => {
     if (!startTime || isNaN(duration)) return '';
     const [hour, minute] = startTime.split(':').map(Number);
@@ -95,7 +105,7 @@ const ScheduleView: React.FC = () => {
     }
   };
 
-  // Calendar Logic
+  // 📅 Calendar Logic
   const getDaysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   const getFirstDayOfMonth = (date: Date) => {
     let day = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
@@ -117,13 +127,24 @@ const ScheduleView: React.FC = () => {
       const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth();
 
       days.push(
-        <div key={day} className={`min-h-[9rem] bg-white border border-slate-100 p-1.5 hover:bg-slate-50 relative group ${isToday ? 'bg-orange-50/30' : ''}`}>
-          <div className={`text-sm font-semibold mb-1 w-7 h-7 flex items-center justify-center rounded-full ${isToday ? 'bg-orange-500 text-white' : 'text-slate-700'}`}>
+        <div
+          key={day}
+          className={`min-h-[9rem] bg-white border border-slate-100 p-1.5 hover:bg-slate-50 relative group ${
+            isToday ? 'bg-orange-50/30' : ''
+          }`}
+        >
+          <div
+            className={`text-sm font-semibold mb-1 w-7 h-7 flex items-center justify-center rounded-full ${
+              isToday ? 'bg-orange-500 text-white' : 'text-slate-700'
+            }`}
+          >
             {day}
           </div>
+
           <div className="space-y-1.5">
             {daySessions.map(session => (
-              <div key={session.id}
+              <div
+                key={session.id}
                 className={`text-[10px] px-2 py-1.5 rounded border-l-2 truncate
                   ${
                     session.department === Department.MEDIA
@@ -134,16 +155,20 @@ const ScheduleView: React.FC = () => {
                       ? 'bg-emerald-50 text-emerald-700 border-emerald-500'
                       : 'bg-blue-50 text-blue-700 border-blue-500'
                   }`}
-                title={`${session.startTime} - ${session.topic}`}>
+                title={`${session.startTime} - ${session.topic}`}
+              >
                 <div className="font-bold flex justify-between items-center mb-0.5">
-                    <span>{session.startTime}</span>
-                    <span className="opacity-90 text-[9px] bg-white/50 px-1 rounded ml-1 truncate max-w-[50%]">
-                        {session.locationDetail || (session.locationType === LocationType.HALL ? 'Hall' : 'P.?')}
-                    </span>
+                  <span>
+                    {session.startTime} – {calculateEndTime(session.startTime, session.duration)}
+                    <span className="ml-1 opacity-70">({session.duration}')</span>
+                  </span>
+                  <span className="opacity-90 text-[9px] bg-white/50 px-1 rounded ml-1 truncate max-w-[50%]">
+                    {session.locationDetail || (session.locationType === LocationType.HALL ? 'Hall' : 'P.?')}
+                  </span>
                 </div>
                 <div className="truncate font-medium mb-0.5">{session.topic}</div>
                 <div className="truncate opacity-75 text-[9px] flex items-center">
-                    <User size={8} className="mr-0.5"/> {session.trainerName || 'No Trainer'}
+                  <User size={8} className="mr-0.5" /> {session.trainerName || 'No Trainer'}
                 </div>
               </div>
             ))}
@@ -155,24 +180,37 @@ const ScheduleView: React.FC = () => {
     return (
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
-          <h3 className="text-lg font-bold text-slate-800">Tháng {currentDate.getMonth() + 1}, {currentDate.getFullYear()}</h3>
+          <h3 className="text-lg font-bold text-slate-800">
+            Tháng {currentDate.getMonth() + 1}, {currentDate.getFullYear()}
+          </h3>
           <div className="flex space-x-1">
-            <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-500"><ChevronLeft size={20}/></button>
-            <button onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))} className="p-1.5 hover:bg-white rounded-lg text-slate-500"><ChevronRight size={20}/></button>
+            <button
+              onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
+              className="p-1.5 hover:bg-white rounded-lg text-slate-500"
+            >
+              <ChevronLeft size={20} />
+            </button>
+            <button
+              onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
+              className="p-1.5 hover:bg-white rounded-lg text-slate-500"
+            >
+              <ChevronRight size={20} />
+            </button>
           </div>
         </div>
         <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/50">
           {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
-            <div key={d} className="py-2 text-center text-xs font-bold text-slate-400 uppercase">{d}</div>
+            <div key={d} className="py-2 text-center text-xs font-bold text-slate-400 uppercase">
+              {d}
+            </div>
           ))}
         </div>
-        <div className="grid grid-cols-7 bg-slate-100 gap-px border-l border-slate-100">
-          {days}
-        </div>
+        <div className="grid grid-cols-7 bg-slate-100 gap-px border-l border-slate-100">{days}</div>
       </div>
     );
   };
 
+  // 🧾 List View (giữ nguyên + thêm hiển thị giờ kết thúc)
   const renderDaySchedule = (dateStr: string) => {
     const daySessions = sessions.filter(s => s.date === dateStr);
     const dateObj = new Date(dateStr);
@@ -184,7 +222,9 @@ const ScheduleView: React.FC = () => {
     return (
       <div key={dateStr} className="mb-10 relative">
         <div className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur py-4 mb-4 flex items-center border-b border-slate-200">
-          <div className="bg-orange-100 text-orange-700 px-3 py-1 rounded-lg font-bold text-sm mr-3 border border-orange-200">{dateFormatted}</div>
+          <div className="bg-orange-100 text-orange-700 px-3 py-1 rounded-lg font-bold text-sm mr-3 border border-orange-200">
+            {dateFormatted}
+          </div>
           <div>
             <h3 className="text-lg font-bold text-slate-800">{label}</h3>
             {depts && <p className="text-xs text-slate-500 font-medium">Training: {depts}</p>}
@@ -220,16 +260,14 @@ const ScheduleView: React.FC = () => {
                         <input
                           type="time"
                           value={currentData.startTime}
-                          onChange={(e) => handleEditChange('startTime', e.target.value)}
+                          onChange={e => handleEditChange('startTime', e.target.value)}
                           className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-sm w-24 focus:border-orange-500"
                         />
                       ) : (
                         <span className="flex items-center">
-                          <span className="font-bold text-slate-800">{session.startTime}</span>
+                          <span>{session.startTime}</span>
                           <span className="mx-1 text-slate-400">–</span>
-                          <span className="font-bold text-slate-800">
-                            {calculateEndTime(session.startTime, session.duration)}
-                          </span>
+                          <span>{calculateEndTime(session.startTime, session.duration)}</span>
                           <span className="text-sm font-normal text-slate-400 ml-1">
                             ({session.duration}')
                           </span>
@@ -276,17 +314,13 @@ const ScheduleView: React.FC = () => {
                             : 'bg-emerald-50 text-emerald-600'
                         }`}
                       >
-                        {currentData.locationType === LocationType.HALL ? (
-                          <Users size={14} />
-                        ) : (
-                          <MapPin size={14} />
-                        )}
+                        {currentData.locationType === LocationType.HALL ? <Users size={14} /> : <MapPin size={14} />}
                       </div>
                       {isEditing ? (
                         <div className="flex flex-col gap-2">
                           <select
                             value={currentData.locationType}
-                            onChange={(e) => handleEditChange('locationType', e.target.value)}
+                            onChange={e => handleEditChange('locationType', e.target.value)}
                             className="bg-slate-50 border rounded p-1 text-xs"
                           >
                             <option value={LocationType.CLASSROOM}>{LocationType.CLASSROOM}</option>
@@ -295,7 +329,7 @@ const ScheduleView: React.FC = () => {
                           {currentData.locationType === LocationType.HALL ? (
                             <select
                               value={currentData.locationDetail}
-                              onChange={(e) => handleEditChange('locationDetail', e.target.value)}
+                              onChange={e => handleEditChange('locationDetail', e.target.value)}
                               className="bg-slate-50 border rounded p-1 text-xs w-24"
                             >
                               <option value="Hall A">Hall A</option>
@@ -306,7 +340,7 @@ const ScheduleView: React.FC = () => {
                               type="text"
                               placeholder="Số phòng..."
                               value={currentData.locationDetail}
-                              onChange={(e) => handleEditChange('locationDetail', e.target.value)}
+                              onChange={e => handleEditChange('locationDetail', e.target.value)}
                               className="bg-slate-50 border rounded p-1 text-xs w-24"
                             />
                           )}
@@ -382,16 +416,11 @@ const ScheduleView: React.FC = () => {
               setSwapSource(null);
             }}
             className={`flex items-center px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm ml-auto ${
-              swapMode
-                ? 'bg-blue-600 text-white ring-4 ring-blue-100'
-                : 'bg-white border text-slate-700'
+              swapMode ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-white border text-slate-700'
             }`}
           >
-            <ArrowRightLeft
-              size={18}
-              className={`mr-2 ${swapMode ? 'rotate-180' : ''}`}
-            />
-            {swapMode ? "Đang bật Đổi lịch" : "Đổi lịch"}
+            <ArrowRightLeft size={18} className={`mr-2 ${swapMode ? 'rotate-180' : ''}`} />
+            {swapMode ? 'Đang bật Đổi lịch' : 'Đổi lịch'}
           </button>
         )}
       </div>
@@ -401,9 +430,7 @@ const ScheduleView: React.FC = () => {
           <div className="bg-white p-2 rounded-full mr-3 shadow-sm text-blue-600">
             <ArrowRightLeft size={16} />
           </div>
-          {swapSource
-            ? "Bước 2: Chọn slot thứ hai để hoán đổi vị trí."
-            : "Bước 1: Chọn slot đầu tiên bạn muốn đổi lịch."}
+          {swapSource ? 'Bước 2: Chọn slot thứ hai để hoán đổi vị trí.' : 'Bước 1: Chọn slot đầu tiên bạn muốn đổi lịch.'}
         </div>
       )}
 
@@ -411,11 +438,7 @@ const ScheduleView: React.FC = () => {
         {viewMode === 'list'
           ? uniqueDates.length > 0
             ? uniqueDates.map(date => renderDaySchedule(date))
-            : (
-              <div className="text-center py-20 text-slate-400">
-                Chưa có lịch training nào.
-              </div>
-            )
+            : <div className="text-center py-20 text-slate-400">Chưa có lịch training nào.</div>
           : renderCalendar()}
       </div>
     </div>
