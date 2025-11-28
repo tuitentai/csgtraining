@@ -57,22 +57,22 @@ const App: React.FC = () => {
   }, []);
 
   // 🔥 Chỉ reload dữ liệu dashboard khi không ở trang thao tác (để tránh “reload app” khi bấm Lưu)
- useEffect(() => {
-  if (view === 'schedule' || view === 'curriculum' || view === 'admin') return;
+  useEffect(() => {
+    if (view === 'schedule' || view === 'curriculum' || view === 'admin') return;
 
-  (async () => {
-    await waitForFirestoreReady();
-    const sessions = getSessions();
-    const approved = sessions.filter((s) => s.status === Status.APPROVED).length;
-    const pending = sessions.filter((s) => s.status === Status.PENDING).length;
-    setStats({
-      total: sessions.length,
-      approved,
-      pending,
-    });
-    setAppConfig(getAppConfig());
-  })();
-}, [view]);  // Dữ liệu chỉ reload khi view thay đổi
+    (async () => {
+      await waitForFirestoreReady();
+      const sessions = getSessions();
+      const approved = sessions.filter((s) => s.status === Status.APPROVED).length;
+      const pending = sessions.filter((s) => s.status === Status.PENDING).length;
+      setStats({
+        total: sessions.length,
+        approved,
+        pending,
+      });
+      setAppConfig(getAppConfig());
+    })();
+  }, [view]); // Chỉ reload khi 'view' thay đổi
 
   // ✅ Lưu lại view mỗi khi người dùng đổi trang
   useEffect(() => {
