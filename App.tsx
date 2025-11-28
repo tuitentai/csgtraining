@@ -65,12 +65,16 @@ const App: React.FC = () => {
       const sessions = getSessions();
       const approved = sessions.filter((s) => s.status === Status.APPROVED).length;
       const pending = sessions.filter((s) => s.status === Status.PENDING).length;
-      setStats({ total: sessions.length, approved, pending });
+      setStats({
+        total: sessions.length,
+        approved,
+        pending,
+      });
       setAppConfig(getAppConfig());
     })();
   }, [view, refreshKey]);
 
-  // ✅ Lưu lại view hiện tại
+  // ✅ Lưu lại view mỗi khi người dùng đổi trang
   useEffect(() => {
     localStorage.setItem('currentView', view);
   }, [view]);
@@ -155,7 +159,7 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Stats */}
+            {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md">
                 <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
@@ -296,20 +300,16 @@ const App: React.FC = () => {
 
       {/* Mobile Bottom Nav */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] flex justify-around py-2 md:hidden z-40">
-        {[
-          { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Home' },
+        {[{ id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Home' },
           { id: 'curriculum', icon: <BookOpen size={20} />, label: 'Giáo án' },
           { id: 'schedule', icon: <Calendar size={20} />, label: 'Lịch' },
           { id: 'board', icon: <Info size={20} />, label: 'BCN' },
           { id: 'guide', icon: <BookMarked size={20} />, label: 'Hướng dẫn' },
-          { id: 'admin', icon: <Settings size={20} />, label: 'Admin' },
-        ].map((item) => (
+          { id: 'admin', icon: <Settings size={20} />, label: 'Admin' }].map((item) => (
           <button
             key={item.id}
             onClick={() => setView(item.id as ViewState)}
-            className={`flex flex-col items-center text-xs font-medium ${
-              view === item.id ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'
-            }`}
+            className={`flex flex-col items-center text-xs font-medium ${view === item.id ? 'text-orange-600' : 'text-slate-400 hover:text-slate-600'}`}
           >
             {item.icon}
             <span className="mt-1">{item.label}</span>
