@@ -31,6 +31,7 @@ import {
 const SUPER_ADMIN_EMAIL = 'thanhtailai2003@gmail.com';
 
 const App: React.FC = () => {
+  // ✅ Giữ lại view người dùng chọn lần cuối
   const [view, setView] = useState<ViewState>(() => {
     const savedView = localStorage.getItem('currentView');
     return (savedView as ViewState) || 'dashboard';
@@ -46,40 +47,34 @@ const App: React.FC = () => {
   });
 
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-  const [isLoading, setIsLoading] = useState(true); // New state to track data loading
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);  // To track if data is still loading
 
-  // 🔥 Subscribe Firestore changes
+  // 🔥 Mới thêm vào: Load data ngay lập tức từ Firestore khi trang reload
   useEffect(() => {
-    subscribeDataChanges(() => {
-      setRefreshKey((prev) => prev + 1);
-    });
-  }, []);
+    const loadData = async () => {
+      setIsLoading(true); // Set loading to true when data is being fetched
 
-  // 🔥 Chỉ reload dữ liệu dashboard khi không ở trang thao tác (để tránh “reload app” khi bấm Lưu)
-  useEffect(() => {
-    if (view === 'schedule' || view === 'curriculum' || view === 'admin') return;
+      await waitForFirestoreReady(); // Ensure Firestore is ready
 
-    (async () => {
-      setIsLoading(true);  // Set loading to true when data is being fetched
-      try {
-        await waitForFirestoreReady();
-        const sessions = getSessions();
-        const approved = sessions.filter((s) => s.status === Status.APPROVED).length;
-        const pending = sessions.filter((s) => s.status === Status.PENDING).length;
-        setStats({
-          total: sessions.length,
-          approved,
-          pending,
-        });
-        setAppConfig(getAppConfig());
-      } catch (error) {
-        console.error("Error loading data: ", error);
-      } finally {
-        setIsLoading(false);  // Set loading to false once data is loaded
-      }
-    })();
-  }, [view]); // Chỉ reload khi 'view' thay đổi
+      // Fetch the latest sessions and app config directly from Firestore
+      const sessions = getSessions();
+      const approved = sessions.filter((s) => s.status === Status.APPROVED).length;
+      const pending = sessions.filter((s) => s.status === Status.PENDING).length;
+
+      setStats({
+        total: sessions.length,
+        approved,
+        pending,
+      });
+      
+      setAppConfig(getAppConfig());
+
+      setIsLoading(false); // Once data is fetched, set loading to false
+    };
+
+    loadData(); // Execute the data loading function
+  }, []); // Only run this once when the component is mounted (on reload)
 
   // ✅ Lưu lại view mỗi khi người dùng đổi trang
   useEffect(() => {
