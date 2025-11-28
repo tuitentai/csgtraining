@@ -26,6 +26,17 @@ const ScheduleView: React.FC = () => {
     return (localStorage.getItem('viewMode') as 'list' | 'calendar') || 'list';
   });
 
+ // Detect mobile screen
+const [isMobile, setIsMobile] = useState(false);
+
+useEffect(() => {
+  const check = () => setIsMobile(window.innerWidth < 768);
+  check();
+  window.addEventListener("resize", check);
+  return () => window.removeEventListener("resize", check);
+}, []);
+ 
+
   const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth(), 1);
@@ -126,36 +137,78 @@ const ScheduleView: React.FC = () => {
           </div>
 
           {/* COMPACT ITEM CHO MOBILE */}
-          <div className="space-y-1.5">
-            {daySessions.map(session => (
-              <div
-                key={session.id}
-                onClick={() => openBottomSheet(session)}
-                className={`
-                  text-[11px] px-2 py-2 rounded-md border-l-4 shadow-sm
-                  cursor-pointer active:scale-[0.98] transition
-                  ${
-                    session.department === Department.MEDIA
-                      ? 'bg-purple-50 border-purple-500 text-purple-800'
-                      : session.department === Department.EVENT
-                      ? 'bg-orange-50 border-orange-500 text-orange-800'
-                      : session.department === Department.ER
-                      ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
-                      : 'bg-blue-50 border-blue-500 text-blue-800'
-                  }
-                `}
-              >
-                {/* ⏱ THỜI GIAN (chỉ giữ gọn) */}
-                <div className="font-semibold">
-                  {session.startTime} – {calculateEndTime(session.startTime, session.duration)}{' '}
-                  ({session.duration}')
-                </div>
+        <div className="space-y-1.5">
+  {daySessions.map(session => (
+    isMobile ? (
+      // 👉 MOBILE: CARD GỌN
+      <div
+        key={session.id}
+        onClick={() => openBottomSheet(session)}
+        className={`
+          text-[11px] px-2 py-2 rounded-md border-l-4 shadow-sm
+          cursor-pointer active:scale-[0.98] transition
+          ${
+            session.department === Department.MEDIA
+              ? 'bg-purple-50 border-purple-500 text-purple-800'
+              : session.department === Department.EVENT
+              ? 'bg-orange-50 border-orange-500 text-orange-800'
+              : session.department === Department.ER
+              ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+              : 'bg-blue-50 border-blue-500 text-blue-800'
+          }
+        `}
+      >
+        <div className="font-semibold">
+          {session.startTime} – {calculateEndTime(session.startTime, session.duration)}
+        </div>
+        <div className="text-[10px] opacity-70">
+          ({session.duration}')
+        </div>
+      </div>
+    ) : (
+      // 👉 DESKTOP: GIAO DIỆN ĐẦY ĐỦ CŨ
+      <div
+        key={session.id}
+        className={`
+          text-[10px] px-2 py-1.5 rounded border-l-2 relative
+          ${
+            session.department === Department.MEDIA
+              ? 'bg-purple-50 text-purple-700 border-purple-500'
+              : session.department === Department.EVENT
+              ? 'bg-orange-50 text-orange-700 border-orange-500'
+              : session.department === Department.ER
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-500'
+              : 'bg-blue-50 text-blue-700 border-blue-500'
+          }
+        `}
+      >
+        <div className="font-bold flex justify-between items-center mb-0.5">
+          <span>
+            {session.startTime} – {calculateEndTime(session.startTime, session.duration)} ({session.duration}')
+          </span>
+          <button
+            onClick={() => openEditModal(session)}
+            className="text-slate-400 hover:text-slate-700 p-1 transition-colors"
+          >
+            ✏️
+          </button>
+        </div>
 
-                {/* CHỈ MOBILE HIỆN ÍT THÔI */}
-                <div className="truncate text-[10px] opacity-80">{session.topic}</div>
-              </div>
-            ))}
-          </div>
+        <div className="truncate font-medium mb-0.5">{session.topic}</div>
+
+        <div className="truncate opacity-75 text-[9px] flex items-center">
+          <User size={8} className="mr-0.5" /> {session.trainerName || 'No Trainer'}
+        </div>
+
+        <div className="truncate text-[9px] text-slate-500 flex items-center">
+          <MapPin size={8} className="mr-0.5" />
+          {session.locationDetail || (session.locationType === LocationType.HALL ? 'Hall' : 'P.?')}
+        </div>
+      </div>
+    )
+  ))}
+</div>
+
         </div>
       );
     }
