@@ -14,29 +14,32 @@ import {
 } from 'lucide-react';
 
 const ScheduleView: React.FC = () => {
+  // State for sessions, edited session, and editing mode
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedSession, setEditedSession] = useState<TrainingSession | null>(null);
   const [swapMode, setSwapMode] = useState(false);
   const [swapSource, setSwapSource] = useState<string | null>(null);
 
-  // ✅ Giữ lại chế độ hiển thị khi reload hoặc khi lưu
+  // View mode (list or calendar view)
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>(() => {
     return (localStorage.getItem('viewMode') as 'list' | 'calendar') || 'list';
   });
 
+  // Current date to display
   const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
+    return new Date(now.getFullYear(), now.getMonth(), 1);  // Default to current month
   });
 
-  // ✅ Modal edit state
+  // Modal edit state
   const [editModal, setEditModal] = useState<{ open: boolean; session?: TrainingSession | null }>({
     open: false,
     session: null,
   });
   const [tempSession, setTempSession] = useState<TrainingSession | null>(null);
 
+  // Fetch sessions when component mounts
   useEffect(() => {
     const loaded = getSessions().sort((a, b) => {
       if (a.date !== b.date) return a.date.localeCompare(b.date);
@@ -45,6 +48,7 @@ const ScheduleView: React.FC = () => {
     setSessions(loaded);
   }, []);
 
+  // Helper function to format date
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
@@ -52,7 +56,7 @@ const ScheduleView: React.FC = () => {
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
-  // 🕒 Hàm tính giờ kết thúc
+  // Helper function to calculate end time based on start time and duration
   const calculateEndTime = (startTime: string, duration: number) => {
     if (!startTime || isNaN(duration)) return '';
     const [hour, minute] = startTime.split(':').map(Number);
@@ -62,12 +66,14 @@ const ScheduleView: React.FC = () => {
     return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
   };
 
+  // Handle changes in the session edit form
   const handleEditChange = (field: keyof TrainingSession, value: any) => {
     if (editedSession) {
       setEditedSession({ ...editedSession, [field]: value });
     }
   };
 
+  // Handle save changes in session
   const handleSave = (id: string) => {
     if (editedSession && editedSession.id === id) {
       updateSession(editedSession);
@@ -77,6 +83,7 @@ const ScheduleView: React.FC = () => {
     }
   };
 
+  // Handle click on edit button
   const handleEditClick = (session: TrainingSession) => {
     if (editingId === session.id) {
       handleSave(session.id);
@@ -86,6 +93,7 @@ const ScheduleView: React.FC = () => {
     }
   };
 
+  // Handle selection for swapping sessions
   const handleSwapSelect = (id: string) => {
     if (!swapSource) {
       setSwapSource(id);
@@ -120,14 +128,16 @@ const ScheduleView: React.FC = () => {
     }
   };
 
-  // 📅 Calendar Logic
+  // --------------------------
+  // Calendar view helpers
+  // --------------------------
   const getDaysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   const getFirstDayOfMonth = (date: Date) => {
     let day = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-    return day === 0 ? 6 : day - 1;
+    return day === 0 ? 6 : day - 1;  // Adjust for Monday as first day of week
   };
 
-  // 🧠 Modal Handler
+  // Handle edit modal actions
   const openEditModal = (session: TrainingSession) => {
     setTempSession({ ...session });
     setEditModal({ open: true, session });
@@ -137,294 +147,109 @@ const ScheduleView: React.FC = () => {
     if (tempSession) setTempSession({ ...tempSession, [field]: value });
   };
 
-  // ✅ Giữ nguyên viewMode khi lưu (không chuyển về danh sách)
+  // Save changes from modal
   const handleSaveModal = () => {
     if (tempSession) {
       updateSession(tempSession);
       setSessions(prev => prev.map(s => (s.id === tempSession.id ? tempSession : s)));
     }
-    // Không reset viewMode
     setEditModal({ open: false, session: null });
     setTempSession(null);
   };
 
+  // Close the edit modal
   const handleCloseModal = () => {
     setEditModal({ open: false, session: null });
     setTempSession(null);
   };
 
   // ================== CALENDAR VIEW ==================
-  const renderCalendar = () => {
-    const daysInMonth = getDaysInMonth(currentDate);
-    const firstDay = getFirstDayOfMonth(currentDate);
-    const days = [];
+const renderCalendar = () => {
+  const daysInMonth = getDaysInMonth(currentDate);
+  const firstDay = getFirstDayOfMonth(currentDate);
+  const days = [];
 
-    for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-32 bg-slate-50 border border-slate-100/50"></div>);
-    }
+  // Ô trống đầu tháng
+  for (let i = 0; i < firstDay; i++) {
+    days.push(
+      <div
+        key={`empty-${i}`}
+        className="h-32 bg-slate-50 border border-slate-100/50 md:h-40"
+      ></div>
+    );
+  }
 
-    for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      const daySessions = sessions.filter(s => s.date === dateStr);
-      const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth();
+  // Lặp từng ngày trong tháng
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dateStr = `${currentDate.getFullYear()}-${String(
+      currentDate.getMonth() + 1
+    ).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 
-      days.push(
+    const daySessions = sessions.filter((s) => s.date === dateStr);
+
+    const isToday =
+      day === new Date().getDate() &&
+      currentDate.getMonth() === new Date().getMonth();
+
+    days.push(
+      <div
+        key={day}
+        className={`min-h-[10rem] md:min-h-[12rem] bg-white border border-slate-200 p-1.5 md:p-2 hover:bg-slate-50 relative overflow-y-auto ${
+          isToday ? "bg-orange-50/40" : ""
+        }`}
+      >
+        {/* Ngày */}
         <div
-          key={day}
-          className={`min-h-[9rem] bg-white border border-slate-100 p-1.5 hover:bg-slate-50 relative ${
-            isToday ? 'bg-orange-50/30' : ''
+          className={`text-xs md:text-sm font-semibold mb-1 w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full ${
+            isToday ? "bg-orange-500 text-white" : "text-slate-700"
           }`}
         >
-          <div
-            className={`text-sm font-semibold mb-1 w-7 h-7 flex items-center justify-center rounded-full ${
-              isToday ? 'bg-orange-500 text-white' : 'text-slate-700'
-            }`}
-          >
-            {day}
-          </div>
-
-          <div className="space-y-1.5">
-            {daySessions.map(session => (
-              <div
-                key={session.id}
-                className={`text-[10px] px-2 py-1.5 rounded border-l-2 relative ${
-                  session.department === Department.MEDIA
-                    ? 'bg-purple-50 text-purple-700 border-purple-500'
-                    : session.department === Department.EVENT
-                    ? 'bg-orange-50 text-orange-700 border-orange-500'
-                    : session.department === Department.ER
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-500'
-                    : 'bg-blue-50 text-blue-700 border-blue-500'
-                }`}
-              >
-                <div className="font-bold flex justify-between items-center mb-0.5">
-                  <span>
-                    {session.startTime} – {calculateEndTime(session.startTime, session.duration)} ({session.duration}')
-                  </span>
-                  <button
-                    onClick={() => openEditModal(session)}
-                    className="text-slate-400 hover:text-slate-700 p-1 transition-colors"
-                  >
-                    ✏️
-                  </button>
-                </div>
-                <div className="truncate font-medium mb-0.5">{session.topic}</div>
-                <div className="truncate opacity-75 text-[9px] flex items-center">
-                  <User size={8} className="mr-0.5" /> {session.trainerName || 'No Trainer'}
-                </div>
-                {/* ✅ Hiển thị địa điểm */}
-                <div className="truncate text-[9px] text-slate-500 flex items-center">
-                  <MapPin size={8} className="mr-0.5" />
-                  {session.locationDetail || (session.locationType === LocationType.HALL ? 'Hall' : 'P.?')}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
-            <h3 className="text-lg font-bold text-slate-800">
-              Tháng {currentDate.getMonth() + 1}, {currentDate.getFullYear()}
-            </h3>
-            <div className="flex space-x-1">
-              <button
-                onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
-                className="p-1.5 hover:bg-white rounded-lg text-slate-500"
-              >
-                <ChevronLeft size={20} />
-              </button>
-              <button
-                onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
-                className="p-1.5 hover:bg-white rounded-lg text-slate-500"
-              >
-                <ChevronRight size={20} />
-              </button>
-            </div>
-          </div>
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/50">
-            {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
-              <div key={d} className="py-2 text-center text-xs font-bold text-slate-400 uppercase">
-                {d}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 bg-slate-100 gap-px border-l border-slate-100">{days}</div>
+          {day}
         </div>
 
-        {/* 🔹 Modal chỉnh sửa - chỉ chỉnh giờ và thời lượng */}
-        {editModal.open && tempSession && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-lg w-[320px] p-5 space-y-3">
-              <h3 className="text-lg font-bold text-slate-800 mb-2">Chỉnh sửa Training</h3>
-
-              <div className="space-y-2 text-sm">
-                <label className="block text-slate-600 font-medium">Giờ bắt đầu</label>
-                <input
-                  type="time"
-                  value={tempSession.startTime}
-                  onChange={e => handleModalChange('startTime', e.target.value)}
-                  className="w-full border rounded p-2 text-sm"
-                />
-
-                <label className="block text-slate-600 font-medium mt-2">Thời lượng (phút)</label>
-                <input
-                  type="number"
-                  value={tempSession.duration}
-                  onChange={e => handleModalChange('duration', Number(e.target.value))}
-                  className="w-full border rounded p-2 text-sm"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-3">
-                <button
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm hover:bg-slate-300"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={handleSaveModal}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
-                >
-                  Lưu thay đổi
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </>
-    );
-  };
-
-  // ================== LIST VIEW ==================
-  const renderDaySchedule = (dateStr: string) => {
-    const daySessions = sessions.filter(s => s.date === dateStr);
-    const dateObj = new Date(dateStr);
-    const dayName = new Intl.DateTimeFormat('vi-VN', { weekday: 'long' }).format(dateObj);
-    const dateFormatted = formatDate(dateStr);
-    const depts = Array.from(new Set(daySessions.map(s => s.department))).join(', ');
-    const label = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} - ${dateFormatted}`;
-
-    return (
-      <div key={dateStr} className="mb-10 relative">
-        <div className="sticky top-0 z-10 bg-slate-50/95 backdrop-blur py-4 mb-4 flex items-center border-b border-slate-200">
-          <div className="bg-orange-100 text-orange-700 px-3 py-1 rounded-lg font-bold text-sm mr-3 border border-orange-200">
-            {dateFormatted}
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-slate-800">{label}</h3>
-            {depts && <p className="text-xs text-slate-500 font-medium">Training: {depts}</p>}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
-          {daySessions.map(session => {
-            const isEditing = editingId === session.id;
-            const currentData = isEditing && editedSession ? editedSession : session;
-
-            const deptColor =
-              session.department === Department.MEDIA
-                ? 'border-l-4 border-l-purple-400'
-                : session.department === Department.EVENT
-                ? 'border-l-4 border-l-orange-400'
-                : session.department === Department.ER
-                ? 'border-l-4 border-l-emerald-400'
-                : 'border-l-4 border-l-blue-400';
+        {/* Danh sách session */}
+        <div className="flex flex-col gap-1">
+          {daySessions.map((session) => {
+            const heightPx = Math.max(session.duration, 28); // min-height
 
             return (
               <div
                 key={session.id}
-                className={`relative bg-white rounded-2xl border transition-all ${deptColor} ${
-                  isEditing ? 'border-green-500 ring-1 ring-green-200' : 'border-slate-200 hover:border-orange-200'
-                }`}
+                className={`rounded-lg px-2 py-1 text-[10px] md:text-xs shadow-sm border-l-4 overflow-hidden cursor-pointer`}
+                style={{
+                  height: `${heightPx}px`,
+                  minHeight: "28px",
+                  backgroundColor:
+                    session.department === Department.MEDIA
+                      ? "#F3E8FF"
+                      : session.department === Department.EVENT
+                      ? "#FFEAD5"
+                      : session.department === Department.ER
+                      ? "#D1FAE5"
+                      : "#DBEAFE",
+                  borderColor:
+                    session.department === Department.MEDIA
+                      ? "#A855F7"
+                      : session.department === Department.EVENT
+                      ? "#F97316"
+                      : session.department === Department.ER
+                      ? "#10B981"
+                      : "#3B82F6",
+                }}
+                onClick={() => openEditModal(session)}
               >
-                <div className="p-5 pl-7">
-                  <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center text-slate-800 font-bold text-lg">
-                      <Clock size={18} className="mr-2 text-slate-400" />
-                      {isEditing ? (
-                        <input
-                          type="time"
-                          value={currentData.startTime}
-                          onChange={e => handleEditChange('startTime', e.target.value)}
-                          className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-sm w-24 focus:border-orange-500"
-                        />
-                      ) : (
-                        <span className="flex items-center">
-                          <span>{session.startTime}</span>
-                          <span className="mx-1 text-slate-400">–</span>
-                          <span>{calculateEndTime(session.startTime, session.duration)}</span>
-                          <span className="text-sm font-normal text-slate-400 ml-1">
-                            ({session.duration}')
-                          </span>
-                        </span>
-                      )}
-                    </div>
+                <div className="font-bold truncate">
+                  {session.startTime} –{" "}
+                  {calculateEndTime(session.startTime, session.duration)}
+                  {"  "}
+                  <span className="opacity-70">({session.duration}’)</span>
+                </div>
 
-                    <span
-                      className={`text-[10px] font-bold uppercase px-2 py-1 rounded-full border ${
-                        session.department === Department.GENERAL
-                          ? 'bg-blue-50 text-blue-700 border-blue-200'
-                          : session.department === Department.MEDIA
-                          ? 'bg-purple-50 text-purple-700 border-purple-200'
-                          : session.department === Department.EVENT
-                          ? 'bg-orange-50 text-orange-700 border-orange-200'
-                          : session.department === Department.ER
-                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          : 'bg-slate-100 text-slate-500 border-slate-200'
-                      }`}
-                    >
-                      {session.department}
-                    </span>
-                  </div>
+                <div className="truncate">{session.topic}</div>
 
-                  {isEditing && (
-                    <div className="text-[10px] text-slate-500 mb-2">
-                      Kết thúc: {calculateEndTime(currentData.startTime, currentData.duration)}
-                    </div>
-                  )}
-
-                  <h4 className="font-bold text-slate-800 text-lg mb-1">{session.topic}</h4>
-
-                  <div className="flex items-center text-sm text-slate-500 mb-4">
-                    <User size={14} className="mr-1.5" />
-                    <span>{session.trainerName || 'Chưa có Trainer'}</span>
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
-                    <div className="flex items-center text-sm font-medium text-slate-700">
-                      <div
-                        className={`p-1.5 rounded-full mr-2 ${
-                          currentData.locationType === LocationType.HALL
-                            ? 'bg-indigo-50 text-indigo-600'
-                            : 'bg-emerald-50 text-emerald-600'
-                        }`}
-                      >
-                        {currentData.locationType === LocationType.HALL ? <Users size={14} /> : <MapPin size={14} />}
-                      </div>
-                      <span>
-                        {session.locationType} {session.locationDetail && `• ${session.locationDetail}`}
-                      </span>
-                    </div>
-
-                    {!swapMode && (
-                      <button
-                        onClick={() => handleEditClick(session)}
-                        className={`text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
-                          isEditing
-                            ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
-                      >
-                        {isEditing ? 'Lưu' : 'Sửa'}
-                      </button>
-                    )}
-                  </div>
+                <div className="truncate flex items-center opacity-70 text-[9px]">
+                  <User size={8} className="mr-1" />
+                  {session.trainerName || "No Trainer"}
                 </div>
               </div>
             );
@@ -432,86 +257,279 @@ const ScheduleView: React.FC = () => {
         </div>
       </div>
     );
-  };
-
-  const uniqueDates = Array.from(new Set(sessions.map(s => s.date))).sort() as string[];
+  }
 
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
-        <div>
-          <h2 className="text-xl font-bold text-slate-800">Lịch Training</h2>
-          <p className="text-sm text-slate-500">Xem và quản lý lịch trình chi tiết</p>
+    <>
+      {/* Header tháng */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mb-3">
+        <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+          <h3 className="text-lg font-bold text-slate-800">
+            Tháng {currentDate.getMonth() + 1}, {currentDate.getFullYear()}
+          </h3>
+
+          <div className="flex space-x-2">
+            <button
+              onClick={() =>
+                setCurrentDate(
+                  new Date(
+                    currentDate.getFullYear(),
+                    currentDate.getMonth() - 1
+                  )
+                )
+              }
+              className="p-2 rounded-lg hover:bg-white text-slate-600"
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <button
+              onClick={() =>
+                setCurrentDate(
+                  new Date(
+                    currentDate.getFullYear(),
+                    currentDate.getMonth() + 1
+                  )
+                )
+              }
+              className="p-2 rounded-lg hover:bg-white text-slate-600"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center space-x-3 bg-slate-100 p-1 rounded-xl">
-          <button
-            onClick={() => {
-              setViewMode('list');
-              localStorage.setItem('viewMode', 'list');
-              setSwapMode(false);
-            }}
-            className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium ${
-              viewMode === 'list' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
-            }`}
-          >
-            <List size={16} className="mr-2" /> Danh Sách
-          </button>
-          <button
-            onClick={() => {
-              setViewMode('calendar');
-              localStorage.setItem('viewMode', 'calendar');
-              setSwapMode(false);
-            }}
-            className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium ${
-              viewMode === 'calendar' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
-            }`}
-          >
-            <CalendarIcon size={16} className="mr-2" /> Lịch Tháng
-          </button>
+        {/* Header days */}
+        <div className="grid grid-cols-7 text-center bg-slate-50 border-b">
+          {["T2", "T3", "T4", "T5", "T6", "T7", "CN"].map((d) => (
+            <div
+              key={d}
+              className="py-2 text-[10px] md:text-xs font-bold text-slate-500"
+            >
+              {d}
+            </div>
+          ))}
         </div>
 
-        {viewMode === 'list' && (
-          <button
-            onClick={() => {
-              setSwapMode(!swapMode);
-              setSwapSource(null);
-            }}
-            className={`flex items-center px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm ml-auto ${
-              swapMode
-                ? 'bg-blue-600 text-white ring-4 ring-blue-100'
-                : 'bg-white border text-slate-700'
-            }`}
-          >
-            <ArrowRightLeft
-              size={18}
-              className={`mr-2 ${swapMode ? 'rotate-180' : ''}`}
-            />
-            {swapMode ? 'Đang bật Đổi lịch' : 'Đổi lịch'}
-          </button>
-        )}
+        {/* Calendar grid */}
+        <div className="grid grid-cols-7 bg-slate-200 gap-px">
+          {days}
+        </div>
       </div>
 
-      {swapMode && viewMode === 'list' && (
-        <div className="bg-blue-50 border border-blue-100 text-blue-800 p-4 rounded-xl text-sm flex items-center justify-center">
-          <div className="bg-white p-2 rounded-full mr-3 shadow-sm text-blue-600">
-            <ArrowRightLeft size={16} />
+      {/* MODAL Chỉnh sửa */}
+      {editModal.open && tempSession && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg w-[320px] p-5 space-y-3">
+            <h3 className="text-lg font-bold">Chỉnh sửa Training</h3>
+
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs font-bold text-slate-600">
+                  Giờ bắt đầu
+                </label>
+                <input
+                  type="time"
+                  value={tempSession.startTime}
+                  onChange={(e) =>
+                    handleModalChange("startTime", e.target.value)
+                  }
+                  className="w-full border rounded p-2 text-sm"
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold text-slate-600">
+                  Thời lượng (phút)
+                </label>
+                <input
+                  type="number"
+                  value={tempSession.duration}
+                  onChange={(e) =>
+                    handleModalChange("duration", Number(e.target.value))
+                  }
+                  className="w-full border rounded p-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2">
+              <button
+                onClick={handleCloseModal}
+                className="px-4 py-2 bg-slate-200 rounded-lg text-sm"
+              >
+                Hủy
+              </button>
+              <button
+                onClick={handleSaveModal}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm"
+              >
+                Lưu
+              </button>
+            </div>
           </div>
-          {swapSource
-            ? 'Bước 2: Chọn slot thứ hai để hoán đổi vị trí.'
-            : 'Bước 1: Chọn slot đầu tiên bạn muốn đổi lịch.'}
         </div>
       )}
+    </>
+  );
+};
 
-      <div className="pb-20">
-        {viewMode === 'list'
-          ? uniqueDates.length > 0
-            ? uniqueDates.map(date => renderDaySchedule(date))
-            : <div className="text-center py-20 text-slate-400">Chưa có lịch training nào.</div>
-          : renderCalendar()}
+// ================== LIST VIEW ==================
+const renderDaySchedule = (dateStr: string) => {
+  const daySessions = sessions.filter((s) => s.date === dateStr);
+  const dateObj = new Date(dateStr);
+  const dayName = new Intl.DateTimeFormat("vi-VN", { weekday: "long" }).format(
+    dateObj
+  );
+  const dateFormatted = formatDate(dateStr);
+
+  return (
+    <div key={dateStr} className="mb-10">
+      <div className="sticky top-0 z-10 bg-slate-100/80 backdrop-blur py-3 px-1 border-b">
+        <h3 className="text-lg font-bold text-slate-800">
+          {dayName} - {dateFormatted}
+        </h3>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        {daySessions.map((session) => {
+          const isEditing = editingId === session.id;
+          const currentData = isEditing ? editedSession : session;
+
+          return (
+            <div
+              key={session.id}
+              className={`relative bg-white rounded-xl border ${
+                isEditing
+                  ? "border-green-500 ring-1 ring-green-200"
+                  : "border-slate-200 hover:border-orange-300"
+              }`}
+            >
+              <div className="p-5">
+                {/* Time */}
+                <div className="flex justify-between items-start mb-2">
+                  <div className="font-bold text-slate-800 flex items-center">
+                    <Clock size={18} className="mr-1 text-slate-400" />
+                    {isEditing ? (
+                      <input
+                        type="time"
+                        value={currentData!.startTime}
+                        onChange={(e) =>
+                          handleEditChange("startTime", e.target.value)
+                        }
+                        className="border rounded px-2 py-1"
+                      />
+                    ) : (
+                      <span>
+                        {session.startTime} –{" "}
+                        {calculateEndTime(
+                          session.startTime,
+                          session.duration
+                        )}{" "}
+                        ({session.duration}')
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Department */}
+                  <span
+                    className={`px-2 py-1 text-[10px] font-bold rounded-full border ${
+                      session.department === Department.MEDIA
+                        ? "bg-purple-50 text-purple-700 border-purple-300"
+                        : session.department === Department.EVENT
+                        ? "bg-orange-50 text-orange-700 border-orange-300"
+                        : session.department === Department.ER
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-300"
+                        : "bg-blue-50 text-blue-700 border-blue-300"
+                    }`}
+                  >
+                    {session.department}
+                  </span>
+                </div>
+
+                {/* Topic */}
+                <div className="font-bold text-lg mb-1">{session.topic}</div>
+
+                {/* Trainer */}
+                <div className="flex items-center text-sm text-slate-600 mb-2">
+                  <User size={14} className="mr-1" />
+                  {session.trainerName || "Chưa có Trainer"}
+                </div>
+
+                {/* Location */}
+                <div className="flex items-center text-sm text-slate-700 border-t pt-3 mt-3">
+                  <MapPin size={14} className="mr-1 text-slate-400" />
+                  {session.locationType}{" "}
+                  {session.locationDetail && `• ${session.locationDetail}`}
+                </div>
+
+                {/* Edit button */}
+                {!swapMode && (
+                  <button
+                    onClick={() => handleEditClick(session)}
+                    className={`mt-4 w-full px-3 py-2 text-sm rounded-lg ${
+                      isEditing
+                        ? "bg-green-600 text-white"
+                        : "bg-slate-100 text-slate-700"
+                    }`}
+                  >
+                    {isEditing ? "Lưu" : "Sửa"}
+                  </button>
+                )}
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
 };
 
+const uniqueDates = Array.from(new Set(sessions.map((s) => s.date))).sort();
+
+// FINAL RETURN
+return (
+  <div className="space-y-6 pb-24">
+    {/* HEADER */}
+    <div className="bg-white rounded-2xl p-4 border shadow-sm">
+      <h2 className="text-xl font-bold text-slate-800">Lịch Training</h2>
+      <p className="text-sm text-slate-500">Xem và quản lý lịch trình</p>
+
+      {/* View mode buttons */}
+      <div className="flex mt-4 bg-slate-100 p-1 rounded-xl">
+        <button
+          onClick={() => {
+            setViewMode("list");
+            localStorage.setItem("viewMode", "list");
+          }}
+          className={`flex-1 py-2 rounded-lg ${
+            viewMode === "list" ? "bg-white shadow text-slate-800" : ""
+          }`}
+        >
+          <List size={16} className="inline-block mr-1" />
+          Danh sách
+        </button>
+
+        <button
+          onClick={() => {
+            setViewMode("calendar");
+            localStorage.setItem("viewMode", "calendar");
+          }}
+          className={`flex-1 py-2 rounded-lg ${
+            viewMode === "calendar" ? "bg-white shadow text-slate-800" : ""
+          }`}
+        >
+          <CalendarIcon size={16} className="inline-block mr-1" />
+          Lịch tháng
+        </button>
+      </div>
+    </div>
+
+    {/* CONTENT */}
+    {viewMode === "calendar"
+      ? renderCalendar()
+      : uniqueDates.map((date) => renderDaySchedule(date))}
+  </div>
+);
+  
 export default ScheduleView;
