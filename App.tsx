@@ -31,7 +31,7 @@ import {
 const SUPER_ADMIN_EMAIL = 'thanhtailai2003@gmail.com';
 
 const App: React.FC = () => {
-  // ✅ Giữ lại view người dùng chọn lần cuối
+  // Giữ lại view người dùng chọn lần cuối
   const [view, setView] = useState<ViewState>(() => {
     const savedView = localStorage.getItem('currentView');
     return (savedView as ViewState) || 'dashboard';
@@ -52,7 +52,7 @@ const App: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<Status | 'ALL'>('ALL'); // Lọc theo tình trạng
   const [sessions, setSessions] = useState([]);
 
-  // 🔥 Mới thêm vào: Load data ngay lập tức từ Firestore khi trang reload
+  // Mới thêm vào: Load data ngay lập tức từ Firestore khi trang reload
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true); // Set loading to true when data is being fetched
@@ -61,7 +61,7 @@ const App: React.FC = () => {
 
       // Fetch the latest sessions and app config directly from Firestore
       const sessions = getSessions();
-
+      
       // Sắp xếp lại dữ liệu sau khi lấy từ Firestore (sắp xếp theo Deadline)
       const sortedSessions = sessions.sort((a, b) => {
         return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
@@ -86,7 +86,7 @@ const App: React.FC = () => {
     loadData(); // Execute the data loading function
   }, []); // Only run this once when the component is mounted (on reload)
 
-  // ✅ Lưu lại view mỗi khi người dùng đổi trang
+  // Lưu lại view mỗi khi người dùng đổi trang
   useEffect(() => {
     localStorage.setItem('currentView', view);
   }, [view]);
