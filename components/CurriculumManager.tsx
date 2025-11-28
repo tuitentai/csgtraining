@@ -550,7 +550,32 @@ const CurriculumManager: React.FC = () => {
               </div>
 
               {/* STATUS */}
-              <div>{getStatusBadge(session.status)}</div>
+              <div>
+                <label className="text-[10px] text-slate-400 font-bold uppercase block mb-1">
+                Trạng thái
+                </label>
+
+            {isEditing ? (
+              <div className="relative">
+                <select
+                  className="w-full bg-white border border-slate-200 rounded-md px-2 py-2 text-xs"
+                  value={editForm.status}
+                  onChange={(e) => handleChange('status', e.target.value)}
+                >
+                  {Object.values(Status).map(s => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+                <ChevronDown
+                    className="absolute right-2 top-2.5 text-slate-400 pointer-events-none"
+                    size={15}
+                  />
+                </div>
+              ) : (
+                getStatusBadge(session.status)
+              )}
+              </div>
+
 
               {/* DEADLINE */}
               <div>
