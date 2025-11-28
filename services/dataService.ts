@@ -28,30 +28,7 @@ const INITIAL_SESSIONS: TrainingSession[] = [
   {
     id: 'gen-1', topic: 'Office + Mail Tổng', department: Department.GENERAL, trainerName: 'Nguyễn Văn A', materialsLink: '', requirements: 'Quy trình sử dụng mail, cách soạn văn bản hành chính', status: Status.PENDING, reviewerName: 'Ban Kiểm Soát', date: '2024-12-07', startTime: '08:00', duration: 45, locationType: LocationType.HALL, locationDetail: 'Hall A', deadline: '2024-12-05'
   },
-  {
-    id: 'med-1', topic: 'Training Design', department: Department.MEDIA, trainerName: '', materialsLink: '', requirements: 'Cơ bản về Photoshop/Illustrator, Brand guidelines', status: Status.PENDING, reviewerName: 'Trưởng Ban Media', date: '2024-12-06', startTime: '13:30', duration: 45, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-04'
-  },
-  {
-    id: 'med-2', topic: 'Training Photo', department: Department.MEDIA, trainerName: '', materialsLink: '', requirements: 'Góc chụp, bố cục, chỉnh sửa Lightroom', status: Status.PENDING, reviewerName: 'Trưởng Ban Media', date: '2024-12-06', startTime: '14:30', duration: 45, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-04'
-  },
-  {
-    id: 'med-3', topic: 'Training Content', department: Department.MEDIA, trainerName: '', materialsLink: '', requirements: 'Tone & Mood, cấu trúc bài viết', status: Status.PENDING, reviewerName: 'Trưởng Ban Media', date: '2024-12-06', startTime: '15:30', duration: 30, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-04'
-  },
-  {
-    id: 'med-4', topic: 'Training Video Edition', department: Department.MEDIA, trainerName: '', materialsLink: '', requirements: 'Premiere/Capcut cơ bản, Tư duy dựng', status: Status.PENDING, reviewerName: 'Trưởng Ban Media', date: '2024-12-06', startTime: '16:15', duration: 45, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-04'
-  },
-  {
-    id: 'evt-1', topic: 'Training Event Production', department: Department.EVENT, trainerName: '', materialsLink: '', requirements: 'Chạy chương trình, setup âm thanh ánh sáng', status: Status.PENDING, reviewerName: 'Trưởng Ban Event', date: '2024-12-07', startTime: '09:00', duration: 45, locationType: LocationType.HALL, locationDetail: 'Hall B', deadline: '2024-12-05'
-  },
-  {
-    id: 'evt-2', topic: 'Training Planning', department: Department.EVENT, trainerName: '', materialsLink: '', requirements: 'Lên ý tưởng, viết proposal, timeline', status: Status.PENDING, reviewerName: 'Trưởng Ban Event', date: '2024-12-07', startTime: '10:00', duration: 45, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-05'
-  },
-  {
-    id: 'evt-3', topic: 'Training Paperwork', department: Department.EVENT, trainerName: '', materialsLink: '', requirements: 'Giấy tờ xin phép, thủ tục hành chính', status: Status.PENDING, reviewerName: 'Trưởng Ban Event', date: '2024-12-07', startTime: '11:00', duration: 30, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-05'
-  },
-  {
-    id: 'er-1', topic: 'Kỹ năng Đối ngoại', department: Department.ER, trainerName: '', materialsLink: '', requirements: 'Giao tiếp, xin tài trợ, giữ mối quan hệ', status: Status.PENDING, reviewerName: 'Trưởng Ban ER', date: '2024-12-07', startTime: '13:30', duration: 45, locationType: LocationType.CLASSROOM, locationDetail: '', deadline: '2024-12-05'
-  },
+  // Add other sessions here
 ];
 
 const INITIAL_CONFIG: AppConfig = {
@@ -79,6 +56,36 @@ let firestoreReady = false;
 
 export const subscribeDataChanges = (callback: () => void) => {
   onDataChangeCallback = callback;
+
+  // Lắng nghe và đồng bộ khi có thay đổi từ Firebase
+  onSnapshot(query(membersCol), (snap) => {
+    const arr: BoardMember[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+    if (arr.length > 0) {
+      BOARD_MEMBERS_CACHE = arr;
+      // Cập nhật vào localStorage
+      localStorage.setItem(BOARD_MEMBERS_KEY, JSON.stringify(arr));
+      firestoreReady = true;
+      notifyDataChange();
+    }
+  });
+
+  onSnapshot(query(sessionsCol), (snap) => {
+    const arr: TrainingSession[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
+    SESSIONS_CACHE = arr; // ⚡ Giữ đồng bộ realtime và localStorage
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(arr)); // Lưu vào localStorage
+    firestoreReady = true;
+    notifyDataChange();
+  });
+
+  onSnapshot(configDoc, (d) => {
+    if (d.exists()) {
+      APP_CONFIG_CACHE = { ...INITIAL_CONFIG, ...(d.data() as any) };
+      // Cập nhật vào localStorage
+      localStorage.setItem(APP_CONFIG_KEY, JSON.stringify(APP_CONFIG_CACHE));
+      firestoreReady = true;
+      notifyDataChange();
+    }
+  });
 };
 
 function notifyDataChange() {
@@ -99,41 +106,14 @@ export const waitForFirestoreReady = async (): Promise<void> => {
   });
 };
 
-(function initFirestoreSubscriptions() {
-  try {
-    onSnapshot(query(membersCol), (snap) => {
-      const arr: BoardMember[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-      if (arr.length > 0) {
-        BOARD_MEMBERS_CACHE = arr;
-        firestoreReady = true;
-        notifyDataChange();
-      }
-    });
-
-    onSnapshot(query(sessionsCol), (snap) => {
-      const arr: TrainingSession[] = snap.docs.map(d => ({ id: d.id, ...(d.data() as any) }));
-      SESSIONS_CACHE = arr; // ⚡ giữ đồng bộ toàn bộ realtime
-      firestoreReady = true;
-      notifyDataChange();
-    });
-
-    onSnapshot(configDoc, (d) => {
-      if (d.exists()) {
-        APP_CONFIG_CACHE = { ...INITIAL_CONFIG, ...(d.data() as any) };
-        firestoreReady = true;
-        notifyDataChange();
-      }
-    });
-  } catch (e) {
-    console.error('Firestore onSnapshot init error:', e);
-  }
-})();
-
 // ==============================
 // EXPORT HÀM (CÓ CẬP NHẬT FIRESTORE)
 // ==============================
 
-export const getBoardMembers = (): BoardMember[] => BOARD_MEMBERS_CACHE;
+export const getBoardMembers = (): BoardMember[] => {
+  const cachedData = localStorage.getItem(BOARD_MEMBERS_KEY);
+  return cachedData ? JSON.parse(cachedData) : BOARD_MEMBERS_CACHE;
+};
 
 export const updateBoardMembers = (members: BoardMember[]): void => {
   (async () => {
@@ -160,6 +140,8 @@ export const updateBoardMembers = (members: BoardMember[]): void => {
       await setDoc(configDoc, { editorEmails: uniqueEditors } as any, { merge: true });
 
       BOARD_MEMBERS_CACHE = [...members];
+      // Cập nhật vào localStorage
+      localStorage.setItem(BOARD_MEMBERS_KEY, JSON.stringify(members));
     } catch (e: any) {
       console.error('updateBoardMembers error:', e?.code, e?.message, e);
       alert('Không thể lưu danh sách nhân sự lên cloud. Vui lòng thử lại.');
@@ -167,13 +149,18 @@ export const updateBoardMembers = (members: BoardMember[]): void => {
   })();
 };
 
-export const getSessions = (): TrainingSession[] => SESSIONS_CACHE;
+export const getSessions = (): TrainingSession[] => {
+  const cachedData = localStorage.getItem(SESSIONS_KEY);
+  return cachedData ? JSON.parse(cachedData) : SESSIONS_CACHE;
+};
 
 export const updateSession = (session: TrainingSession): void => {
   (async () => {
     try {
       await setDoc(doc(db, 'sessions', session.id), session, { merge: true });
       SESSIONS_CACHE = SESSIONS_CACHE.map(s => s.id === session.id ? session : s);
+      // Cập nhật vào localStorage
+      localStorage.setItem(SESSIONS_KEY, JSON.stringify(SESSIONS_CACHE));
       notifyDataChange();
     } catch (e: any) {
       console.error('updateSession error:', e?.code, e?.message, e);
@@ -188,10 +175,8 @@ export const updateAllSessions = (sessions: TrainingSession[]): void => {
       const batch = writeBatch(db);
       const idsIncoming = new Set(sessions.map(s => s.id));
 
-      // Ghi hoặc cập nhật tất cả session còn lại
       sessions.forEach((s) => batch.set(doc(db, 'sessions', s.id), s));
 
-      // 🔥 Xóa những session cũ không còn trong danh sách (đảm bảo đồng bộ Firebase)
       const existing = await getDocs(sessionsCol);
       existing.forEach(d => {
         if (!idsIncoming.has(d.id)) batch.delete(doc(db, 'sessions', d.id));
@@ -199,6 +184,8 @@ export const updateAllSessions = (sessions: TrainingSession[]): void => {
 
       await batch.commit();
       SESSIONS_CACHE = [...sessions];
+      // Cập nhật vào localStorage
+      localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
       notifyDataChange();
       console.log('✅ updateAllSessions đã đồng bộ Firestore thành công.');
     } catch (e: any) {
@@ -213,6 +200,8 @@ export const deleteSession = async (sessionId: string): Promise<void> => {
   try {
     await deleteDoc(doc(db, 'sessions', sessionId));
     SESSIONS_CACHE = SESSIONS_CACHE.filter(s => s.id !== sessionId);
+    // Cập nhật vào localStorage
+    localStorage.setItem(SESSIONS_KEY, JSON.stringify(SESSIONS_CACHE));
     notifyDataChange();
     console.log(`✅ Đã xóa session ${sessionId} khỏi Firestore`);
   } catch (e: any) {
@@ -221,13 +210,18 @@ export const deleteSession = async (sessionId: string): Promise<void> => {
   }
 };
 
-export const getAppConfig = (): AppConfig => APP_CONFIG_CACHE;
+export const getAppConfig = (): AppConfig => {
+  const cachedData = localStorage.getItem(APP_CONFIG_KEY);
+  return cachedData ? JSON.parse(cachedData) : APP_CONFIG_CACHE;
+};
 
 export const updateAppConfig = (config: AppConfig): void => {
   (async () => {
     try {
       await setDoc(configDoc, config, { merge: true });
       APP_CONFIG_CACHE = { ...config };
+      // Cập nhật vào localStorage
+      localStorage.setItem(APP_CONFIG_KEY, JSON.stringify(config));
       console.log('✅ AppConfig updated to Firestore:', config);
     } catch (e: any) {
       console.error('updateAppConfig error:', e?.code, e?.message, e);
