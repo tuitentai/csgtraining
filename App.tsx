@@ -18,8 +18,6 @@ import {
   BookOpen,
   Calendar,
   Info,
-  Menu,
-  X,
   CheckCircle2,
   FileText,
   TrendingUp,
@@ -260,7 +258,11 @@ const App: React.FC = () => {
 
   // --- Sidebar + Mobile + Bottom Nav ---
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans">
+    // 🧩 FIX: Chặn reload toàn app do submit mặc định
+    <div
+      className="min-h-screen bg-slate-50 flex font-sans"
+      onSubmit={(e) => e.preventDefault()} // ✅ CHẶN TOÀN CỤC RELOAD TRÊN MỌI TRANG
+    >
       {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-200 h-screen fixed top-0 left-0 z-30">
         <div className="p-8 flex items-center">
@@ -306,7 +308,7 @@ const App: React.FC = () => {
         <div key={refreshKey}>{renderContent()}</div>
       </main>
 
-      {/* 🧩 NEW: Bottom Navigation cho mobile */}
+      {/* 🧩 Bottom Navigation cho mobile */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] flex justify-around py-2 md:hidden z-40">
         {[
           { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Home' },
@@ -333,4 +335,3 @@ const App: React.FC = () => {
 };
 
 export default App;
-
