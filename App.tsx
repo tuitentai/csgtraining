@@ -31,13 +31,12 @@ import {
 const SUPER_ADMIN_EMAIL = 'thanhtailai2003@gmail.com';
 
 const App: React.FC = () => {
-  // ✅ Giữ lại view người dùng chọn lần cuối, không reset khi reload
+  // ✅ Giữ lại view người dùng chọn lần cuối
   const [view, setView] = useState<ViewState>(() => {
     const savedView = localStorage.getItem('currentView');
     return (savedView as ViewState) || 'dashboard';
   });
 
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [stats, setStats] = useState({ total: 0, approved: 0, pending: 0 });
   const [appConfig, setAppConfig] = useState<AppConfig>({
     logoUrl: 'default',
@@ -47,53 +46,44 @@ const App: React.FC = () => {
     welcomeDescription: '',
   });
 
-  // Admin State
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
-
-  // 🔥 Thêm state để re-render khi Firestore có dữ liệu mới
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // 🔥 Đăng ký callback nhận thay đổi dữ liệu Firebase
+  // 🔥 Subscribe Firestore changes
   useEffect(() => {
     subscribeDataChanges(() => {
       setRefreshKey((prev) => prev + 1);
     });
   }, []);
 
-  // 🔥 Đợi Firestore load lần đầu tiên
+  // 🔥 Chỉ reload dữ liệu dashboard khi không ở trang thao tác (để tránh “reload app” khi bấm Lưu)
   useEffect(() => {
+    if (view === 'schedule' || view === 'curriculum' || view === 'admin') return;
+
     (async () => {
       await waitForFirestoreReady();
       const sessions = getSessions();
       const approved = sessions.filter((s) => s.status === Status.APPROVED).length;
       const pending = sessions.filter((s) => s.status === Status.PENDING).length;
-      setStats({
-        total: sessions.length,
-        approved,
-        pending,
-      });
+      setStats({ total: sessions.length, approved, pending });
       setAppConfig(getAppConfig());
     })();
   }, [view, refreshKey]);
 
-  // ✅ Lưu lại view mỗi khi người dùng đổi trang
+  // ✅ Lưu lại view hiện tại
   useEffect(() => {
     localStorage.setItem('currentView', view);
   }, [view]);
 
   const handleAdminLogin = (user: AdminUser) => {
-    let role: AdminRole | undefined = undefined;
-
-    if (user.email === SUPER_ADMIN_EMAIL) {
-      role = 'SUPER_ADMIN';
-    } else {
+    let role: AdminRole | undefined;
+    if (user.email === SUPER_ADMIN_EMAIL) role = 'SUPER_ADMIN';
+    else {
       const boardMembers = getBoardMembers();
       const isMember = boardMembers.find((m) => m.email === user.email);
       if (isMember) role = 'MANAGER';
     }
-
-    if (role) setAdminUser({ ...user, roleType: role });
-    else setAdminUser({ ...user, roleType: undefined });
+    setAdminUser({ ...user, roleType: role });
   };
 
   const handleAdminLogout = () => {
@@ -112,8 +102,7 @@ const App: React.FC = () => {
   const renderLogo = (size: 'sm' | 'md' = 'md') => {
     const isDefault = appConfig.logoUrl === 'default' || !appConfig.logoUrl;
     const dimension = size === 'sm' ? 'w-8 h-8 rounded-lg' : 'w-10 h-10 rounded-xl';
-
-    if (isDefault) {
+    if (isDefault)
       return (
         <div
           className={`${dimension} bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center text-white font-extrabold text-xl shadow-lg shadow-orange-500/30`}
@@ -121,7 +110,6 @@ const App: React.FC = () => {
           {appConfig.title.charAt(0)}
         </div>
       );
-    }
     return (
       <img
         src={appConfig.logoUrl}
@@ -140,7 +128,6 @@ const App: React.FC = () => {
             <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 text-white shadow-xl">
               <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
               <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-yellow-300 opacity-20 rounded-full blur-2xl"></div>
-
               <div className="relative p-8 md:p-10 flex flex-col md:flex-row items-center gap-6">
                 <div className="hidden md:block shrink-0">{renderLogo()}</div>
                 <div className="flex-1">
@@ -168,9 +155,9 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            {/* Stats Cards */}
+            {/* Stats */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md transition-shadow">
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md">
                 <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
                   <FileText size={24} />
                 </div>
@@ -179,7 +166,7 @@ const App: React.FC = () => {
                   <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md transition-shadow">
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md">
                 <div className="p-3 bg-green-50 text-green-600 rounded-xl">
                   <CheckCircle2 size={24} />
                 </div>
@@ -188,7 +175,7 @@ const App: React.FC = () => {
                   <p className="text-2xl font-bold text-slate-800">{stats.approved}</p>
                 </div>
               </div>
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md transition-shadow">
+              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md">
                 <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
                   <TrendingUp size={24} />
                 </div>
@@ -256,12 +243,11 @@ const App: React.FC = () => {
     }
   };
 
-  // --- Sidebar + Mobile + Bottom Nav ---
+  // --- Layout ---
   return (
-    // 🧩 FIX: Chặn reload toàn app do submit mặc định
     <div
       className="min-h-screen bg-slate-50 flex font-sans"
-      onSubmit={(e) => e.preventDefault()} // ✅ CHẶN TOÀN CỤC RELOAD TRÊN MỌI TRANG
+      onSubmit={(e) => e.preventDefault()} // ✅ Chặn reload toàn app
     >
       {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-200 h-screen fixed top-0 left-0 z-30">
@@ -308,7 +294,7 @@ const App: React.FC = () => {
         <div key={refreshKey}>{renderContent()}</div>
       </main>
 
-      {/* 🧩 Bottom Navigation cho mobile */}
+      {/* Mobile Bottom Nav */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 shadow-[0_-2px_8px_rgba(0,0,0,0.05)] flex justify-around py-2 md:hidden z-40">
         {[
           { id: 'dashboard', icon: <LayoutDashboard size={20} />, label: 'Home' },
