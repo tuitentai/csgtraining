@@ -17,10 +17,11 @@ const ScheduleView: React.FC = () => {
   const [sessions, setSessions] = useState<TrainingSession[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editedSession, setEditedSession] = useState<TrainingSession | null>(null);
+
   const [swapMode, setSwapMode] = useState(false);
   const [swapSource, setSwapSource] = useState<string | null>(null);
 
-  // ✅ Giữ lại chế độ hiển thị khi reload hoặc khi lưu
+  // Giữ chế độ list / calendar
   const [viewMode, setViewMode] = useState<'list' | 'calendar'>(() => {
     return (localStorage.getItem('viewMode') as 'list' | 'calendar') || 'list';
   });
@@ -30,7 +31,11 @@ const ScheduleView: React.FC = () => {
     return new Date(now.getFullYear(), now.getMonth(), 1);
   });
 
-  // ✅ Modal edit state
+  // === Bottom Sheet (Mobile Full Info) ===
+  const [sheetOpen, setSheetOpen] = useState(false);
+  const [sheetSession, setSheetSession] = useState<TrainingSession | null>(null);
+
+  // Modal edit nhanh (đã có)
   const [editModal, setEditModal] = useState<{ open: boolean; session?: TrainingSession | null }>({
     open: false,
     session: null,
@@ -48,11 +53,9 @@ const ScheduleView: React.FC = () => {
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
-    if (parts.length !== 3) return dateStr;
     return `${parts[2]}-${parts[1]}-${parts[0]}`;
   };
 
-  // 🕒 Hàm tính giờ kết thúc
   const calculateEndTime = (startTime: string, duration: number) => {
     if (!startTime || isNaN(duration)) return '';
     const [hour, minute] = startTime.split(':').map(Number);
@@ -62,119 +65,58 @@ const ScheduleView: React.FC = () => {
     return `${String(endHour).padStart(2, '0')}:${String(endMinute).padStart(2, '0')}`;
   };
 
-  const handleEditChange = (field: keyof TrainingSession, value: any) => {
-    if (editedSession) {
-      setEditedSession({ ...editedSession, [field]: value });
-    }
-  };
+  // ======================== CALENDAR LOGIC ========================
+  const getDaysInMonth = (date: Date) =>
+    new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
 
-  const handleSave = (id: string) => {
-    if (editedSession && editedSession.id === id) {
-      updateSession(editedSession);
-      setSessions(prev => prev.map(s => (s.id === id ? editedSession : s)));
-      setEditedSession(null);
-      setEditingId(null);
-    }
-  };
-
-  const handleEditClick = (session: TrainingSession) => {
-    if (editingId === session.id) {
-      handleSave(session.id);
-    } else {
-      setEditingId(session.id);
-      setEditedSession({ ...session });
-    }
-  };
-
-  const handleSwapSelect = (id: string) => {
-    if (!swapSource) {
-      setSwapSource(id);
-    } else {
-      const sourceIdx = sessions.findIndex(s => s.id === swapSource);
-      const targetIdx = sessions.findIndex(s => s.id === id);
-
-      if (sourceIdx !== -1 && targetIdx !== -1) {
-        const sourceSession = { ...sessions[sourceIdx] };
-        const targetSession = { ...sessions[targetIdx] };
-
-        const tempDate = sourceSession.date;
-        const tempTime = sourceSession.startTime;
-
-        sourceSession.date = targetSession.date;
-        sourceSession.startTime = targetSession.startTime;
-
-        targetSession.date = tempDate;
-        targetSession.startTime = tempTime;
-
-        updateSession(sourceSession);
-        updateSession(targetSession);
-
-        const newSessions = getSessions().sort((a, b) => {
-          if (a.date !== b.date) return a.date.localeCompare(b.date);
-          return a.startTime.localeCompare(b.startTime);
-        });
-        setSessions(newSessions);
-      }
-      setSwapSource(null);
-      setSwapMode(false);
-    }
-  };
-
-  // 📅 Calendar Logic
-  const getDaysInMonth = (date: Date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
   const getFirstDayOfMonth = (date: Date) => {
     let day = new Date(date.getFullYear(), date.getMonth(), 1).getDay();
     return day === 0 ? 6 : day - 1;
   };
 
-  // 🧠 Modal Handler
-  const openEditModal = (session: TrainingSession) => {
-    setTempSession({ ...session });
-    setEditModal({ open: true, session });
+  // ======================== BOTTOM SHEET TRIGGER ========================
+  const openBottomSheet = (session: TrainingSession) => {
+    setSheetSession(session);
+    setSheetOpen(true);
   };
 
-  const handleModalChange = (field: keyof TrainingSession, value: any) => {
-    if (tempSession) setTempSession({ ...tempSession, [field]: value });
-  };
-
-  // ✅ Giữ nguyên viewMode khi lưu (không chuyển về danh sách)
-  const handleSaveModal = () => {
-    if (tempSession) {
-      updateSession(tempSession);
-      setSessions(prev => prev.map(s => (s.id === tempSession.id ? tempSession : s)));
-    }
-    // Không reset viewMode
-    setEditModal({ open: false, session: null });
-    setTempSession(null);
-  };
-
-  const handleCloseModal = () => {
-    setEditModal({ open: false, session: null });
-    setTempSession(null);
-  };
-
-  // ================== CALENDAR VIEW ==================
+  // ======================== CALENDAR VIEW ========================
   const renderCalendar = () => {
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDay = getFirstDayOfMonth(currentDate);
+
     const days = [];
 
+    // Ô rỗng đầu tháng
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="h-32 bg-slate-50 border border-slate-100/50"></div>);
+      days.push(
+        <div
+          key={`empty-${i}`}
+          className="h-32 bg-slate-50 border border-slate-100/50"
+        ></div>
+      );
     }
 
+    // Từng ngày trong tháng
     for (let day = 1; day <= daysInMonth; day++) {
-      const dateStr = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      const dateStr = `${currentDate.getFullYear()}-${String(
+        currentDate.getMonth() + 1
+      ).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+
       const daySessions = sessions.filter(s => s.date === dateStr);
-      const isToday = day === new Date().getDate() && currentDate.getMonth() === new Date().getMonth();
+
+      const isToday =
+        day === new Date().getDate() &&
+        currentDate.getMonth() === new Date().getMonth();
 
       days.push(
         <div
           key={day}
-          className={`min-h-[9rem] bg-white border border-slate-100 p-1.5 hover:bg-slate-50 relative ${
-            isToday ? 'bg-orange-50/30' : ''
+          className={`min-h-[10rem] bg-white border border-slate-200 p-2 relative ${
+            isToday ? 'bg-orange-50/40' : ''
           }`}
         >
+          {/* NGÀY */}
           <div
             className={`text-sm font-semibold mb-1 w-7 h-7 flex items-center justify-center rounded-full ${
               isToday ? 'bg-orange-500 text-white' : 'text-slate-700'
@@ -183,40 +125,34 @@ const ScheduleView: React.FC = () => {
             {day}
           </div>
 
+          {/* COMPACT ITEM CHO MOBILE */}
           <div className="space-y-1.5">
             {daySessions.map(session => (
               <div
                 key={session.id}
-                className={`text-[10px] px-2 py-1.5 rounded border-l-2 relative ${
-                  session.department === Department.MEDIA
-                    ? 'bg-purple-50 text-purple-700 border-purple-500'
-                    : session.department === Department.EVENT
-                    ? 'bg-orange-50 text-orange-700 border-orange-500'
-                    : session.department === Department.ER
-                    ? 'bg-emerald-50 text-emerald-700 border-emerald-500'
-                    : 'bg-blue-50 text-blue-700 border-blue-500'
-                }`}
+                onClick={() => openBottomSheet(session)}
+                className={`
+                  text-[11px] px-2 py-2 rounded-md border-l-4 shadow-sm
+                  cursor-pointer active:scale-[0.98] transition
+                  ${
+                    session.department === Department.MEDIA
+                      ? 'bg-purple-50 border-purple-500 text-purple-800'
+                      : session.department === Department.EVENT
+                      ? 'bg-orange-50 border-orange-500 text-orange-800'
+                      : session.department === Department.ER
+                      ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+                      : 'bg-blue-50 border-blue-500 text-blue-800'
+                  }
+                `}
               >
-                <div className="font-bold flex justify-between items-center mb-0.5">
-                  <span>
-                    {session.startTime} – {calculateEndTime(session.startTime, session.duration)} ({session.duration}')
-                  </span>
-                  <button
-                    onClick={() => openEditModal(session)}
-                    className="text-slate-400 hover:text-slate-700 p-1 transition-colors"
-                  >
-                    ✏️
-                  </button>
+                {/* ⏱ THỜI GIAN (chỉ giữ gọn) */}
+                <div className="font-semibold">
+                  {session.startTime} – {calculateEndTime(session.startTime, session.duration)}{' '}
+                  ({session.duration}')
                 </div>
-                <div className="truncate font-medium mb-0.5">{session.topic}</div>
-                <div className="truncate opacity-75 text-[9px] flex items-center">
-                  <User size={8} className="mr-0.5" /> {session.trainerName || 'No Trainer'}
-                </div>
-                {/* ✅ Hiển thị địa điểm */}
-                <div className="truncate text-[9px] text-slate-500 flex items-center">
-                  <MapPin size={8} className="mr-0.5" />
-                  {session.locationDetail || (session.locationType === LocationType.HALL ? 'Hall' : 'P.?')}
-                </div>
+
+                {/* CHỈ MOBILE HIỆN ÍT THÔI */}
+                <div className="truncate text-[10px] opacity-80">{session.topic}</div>
               </div>
             ))}
           </div>
@@ -226,82 +162,216 @@ const ScheduleView: React.FC = () => {
 
     return (
       <>
+        {/* HEADER tháng */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-          <div className="flex items-center justify-between p-4 border-b border-slate-200 bg-slate-50">
-            <h3 className="text-lg font-bold text-slate-800">
+          <div className="flex items-center justify-between p-4 border-b bg-slate-50">
+            <h3 className="text-lg font-bold">
               Tháng {currentDate.getMonth() + 1}, {currentDate.getFullYear()}
             </h3>
+
             <div className="flex space-x-1">
               <button
-                onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1))}
+                onClick={() =>
+                  setCurrentDate(
+                    new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)
+                  )
+                }
                 className="p-1.5 hover:bg-white rounded-lg text-slate-500"
               >
                 <ChevronLeft size={20} />
               </button>
+
               <button
-                onClick={() => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1))}
+                onClick={() =>
+                  setCurrentDate(
+                    new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)
+                  )
+                }
                 className="p-1.5 hover:bg-white rounded-lg text-slate-500"
               >
                 <ChevronRight size={20} />
               </button>
             </div>
           </div>
-          <div className="grid grid-cols-7 border-b border-slate-200 bg-slate-50/50">
+
+          {/* HEADER thứ */}
+          <div className="grid grid-cols-7 bg-slate-50 border-b">
             {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
               <div key={d} className="py-2 text-center text-xs font-bold text-slate-400 uppercase">
                 {d}
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 bg-slate-100 gap-px border-l border-slate-100">{days}</div>
-        </div>
 
-        {/* 🔹 Modal chỉnh sửa - chỉ chỉnh giờ và thời lượng */}
-        {editModal.open && tempSession && (
-          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl shadow-lg w-[320px] p-5 space-y-3">
-              <h3 className="text-lg font-bold text-slate-800 mb-2">Chỉnh sửa Training</h3>
-
-              <div className="space-y-2 text-sm">
-                <label className="block text-slate-600 font-medium">Giờ bắt đầu</label>
-                <input
-                  type="time"
-                  value={tempSession.startTime}
-                  onChange={e => handleModalChange('startTime', e.target.value)}
-                  className="w-full border rounded p-2 text-sm"
-                />
-
-                <label className="block text-slate-600 font-medium mt-2">Thời lượng (phút)</label>
-                <input
-                  type="number"
-                  value={tempSession.duration}
-                  onChange={e => handleModalChange('duration', Number(e.target.value))}
-                  className="w-full border rounded p-2 text-sm"
-                />
-              </div>
-
-              <div className="flex justify-end space-x-2 pt-3">
-                <button
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm hover:bg-slate-300"
-                >
-                  Hủy
-                </button>
-                <button
-                  onClick={handleSaveModal}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
-                >
-                  Lưu thay đổi
-                </button>
-              </div>
-            </div>
+          {/* GRID */}
+          <div className="grid grid-cols-7 bg-slate-100 gap-px border-l border-slate-100">
+            {days}
           </div>
-        )}
+        </div>
       </>
     );
   };
+  // ======================== BOTTOM SHEET ========================
+  const BottomSheet = () => {
+    if (!sheetOpen || !sheetSession) return null;
 
-  // ================== LIST VIEW ==================
+    return (
+      <div
+        className="fixed inset-0 z-50 flex justify-center items-end bg-black/40"
+        onClick={() => setSheetOpen(false)}
+      >
+        <div
+          className="bg-white w-full rounded-t-3xl p-6 pb-10 shadow-xl animate-slideUp"
+          onClick={e => e.stopPropagation()}
+        >
+          <div className="w-12 h-1.5 bg-slate-300 rounded-full mx-auto mb-4"></div>
+
+          <h3 className="text-lg font-bold text-slate-900 mb-3">
+            {sheetSession.topic}
+          </h3>
+
+          <div className="space-y-3 text-[15px]">
+            {/* TIME */}
+            <div className="flex items-center gap-2">
+              <Clock size={16} className="text-slate-500" />
+              <span className="font-semibold">
+                {sheetSession.startTime} –{' '}
+                {calculateEndTime(sheetSession.startTime, sheetSession.duration)}
+              </span>
+              <span className="text-slate-500 ml-1">
+                ({sheetSession.duration}')
+              </span>
+            </div>
+
+            {/* TRAINER */}
+            <div className="flex items-center gap-2">
+              <User size={16} className="text-slate-500" />
+              <span>
+                {sheetSession.trainerName || 'Chưa có Trainer'}
+              </span>
+            </div>
+
+            {/* LOCATION */}
+            <div className="flex items-center gap-2">
+              <MapPin size={16} className="text-slate-500" />
+              <span>
+                {sheetSession.locationType}{' '}
+                {sheetSession.locationDetail && `• ${sheetSession.locationDetail}`}
+              </span>
+            </div>
+
+            {/* DEPARTMENT */}
+            <div className="flex items-center gap-2">
+              <Users size={16} className="text-slate-500" />
+              <span className="font-semibold">{sheetSession.department}</span>
+            </div>
+
+            {/* DATE */}
+            <div className="flex items-center gap-2">
+              <CalendarIcon size={16} className="text-slate-500" />
+              <span>{formatDate(sheetSession.date)}</span>
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              setTempSession({ ...sheetSession });
+              setEditModal({ open: true, session: sheetSession });
+            }}
+            className="mt-6 w-full py-3 bg-blue-600 text-white text-center rounded-xl font-semibold active:scale-95 transition"
+          >
+            Chỉnh sửa Training
+          </button>
+        </div>
+      </div>
+    );
+  };
+
+  // ======================== EDIT MODAL (CŨ + GIỮ NGUYÊN) ========================
+  const openEditModal = (session: TrainingSession) => {
+    setTempSession({ ...session });
+    setEditModal({ open: true, session });
+  };
+
+  const handleModalChange = (field: keyof TrainingSession, value: any) => {
+    if (tempSession) setTempSession({ ...tempSession, [field]: value });
+  };
+
+  const handleSaveModal = () => {
+    if (tempSession) {
+      updateSession(tempSession);
+      setSessions(prev =>
+        prev.map(s => (s.id === tempSession.id ? tempSession : s))
+      );
+    }
+    setEditModal({ open: false, session: null });
+    setSheetOpen(false);
+    setTempSession(null);
+  };
+
+  const handleCloseModal = () => {
+    setEditModal({ open: false, session: null });
+    setTempSession(null);
+  };
+
+  const EditModal = () => {
+    if (!editModal.open || !tempSession) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white rounded-xl shadow-lg w-[340px] p-5 space-y-3">
+          <h3 className="text-lg font-bold text-slate-800 mb-2">
+            Chỉnh sửa Training
+          </h3>
+
+          <div className="space-y-2 text-sm">
+            {/* TIME */}
+            <label className="block text-slate-600 font-medium">
+              Giờ bắt đầu
+            </label>
+            <input
+              type="time"
+              value={tempSession.startTime}
+              onChange={e =>
+                handleModalChange('startTime', e.target.value)
+              }
+              className="w-full border rounded p-2 text-sm"
+            />
+
+            {/* DURATION */}
+            <label className="block text-slate-600 font-medium mt-2">
+              Thời lượng (phút)
+            </label>
+            <input
+              type="number"
+              value={tempSession.duration}
+              onChange={e =>
+                handleModalChange('duration', Number(e.target.value))
+              }
+              className="w-full border rounded p-2 text-sm"
+            />
+          </div>
+
+          <div className="flex justify-end space-x-2 pt-3">
+            <button
+              onClick={handleCloseModal}
+              className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg text-sm hover:bg-slate-300"
+            >
+              Hủy
+            </button>
+
+            <button
+              onClick={handleSaveModal}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700"
+            >
+              Lưu thay đổi
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  // ======================== LIST VIEW ========================
   const renderDaySchedule = (dateStr: string) => {
     const daySessions = sessions.filter(s => s.date === dateStr);
     const dateObj = new Date(dateStr);
@@ -434,10 +504,13 @@ const ScheduleView: React.FC = () => {
     );
   };
 
+  // ======================== MAIN RETURN ========================
   const uniqueDates = Array.from(new Set(sessions.map(s => s.date))).sort() as string[];
 
   return (
     <div className="space-y-6">
+
+      {/* HEADER */}
       <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
         <div>
           <h2 className="text-xl font-bold text-slate-800">Lịch Training</h2>
@@ -445,6 +518,7 @@ const ScheduleView: React.FC = () => {
         </div>
 
         <div className="flex items-center space-x-3 bg-slate-100 p-1 rounded-xl">
+          {/* LIST MODE */}
           <button
             onClick={() => {
               setViewMode('list');
@@ -457,6 +531,8 @@ const ScheduleView: React.FC = () => {
           >
             <List size={16} className="mr-2" /> Danh Sách
           </button>
+
+          {/* CALENDAR MODE */}
           <button
             onClick={() => {
               setViewMode('calendar');
@@ -471,6 +547,7 @@ const ScheduleView: React.FC = () => {
           </button>
         </div>
 
+        {/* SWAP BUTTON */}
         {viewMode === 'list' && (
           <button
             onClick={() => {
@@ -478,15 +555,10 @@ const ScheduleView: React.FC = () => {
               setSwapSource(null);
             }}
             className={`flex items-center px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm ml-auto ${
-              swapMode
-                ? 'bg-blue-600 text-white ring-4 ring-blue-100'
-                : 'bg-white border text-slate-700'
+              swapMode ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-white border text-slate-700'
             }`}
           >
-            <ArrowRightLeft
-              size={18}
-              className={`mr-2 ${swapMode ? 'rotate-180' : ''}`}
-            />
+            <ArrowRightLeft size={18} className={`mr-2 ${swapMode ? 'rotate-180' : ''}`} />
             {swapMode ? 'Đang bật Đổi lịch' : 'Đổi lịch'}
           </button>
         )}
@@ -503,6 +575,7 @@ const ScheduleView: React.FC = () => {
         </div>
       )}
 
+      {/* BODY */}
       <div className="pb-20">
         {viewMode === 'list'
           ? uniqueDates.length > 0
@@ -510,6 +583,12 @@ const ScheduleView: React.FC = () => {
             : <div className="text-center py-20 text-slate-400">Chưa có lịch training nào.</div>
           : renderCalendar()}
       </div>
+
+      {/* BOTTOM SHEET */}
+      <BottomSheet />
+
+      {/* EDIT MODAL */}
+      <EditModal />
     </div>
   );
 };
