@@ -141,32 +141,42 @@ useEffect(() => {
   {daySessions.map(session => (
     isMobile ? (
       // 👉 MOBILE: CARD GỌN
-      <div
-        key={session.id}
-        onClick={() => openBottomSheet(session)}
-        className={`
-  text-[10px] px-1.5 py-1 rounded border-l-4 
-  whitespace-nowrap overflow-hidden text-ellipsis
-  active:scale-[0.98] transition cursor-pointer
-  md:px-2 md:py-2
-  ${
-    session.department === Department.MEDIA
-      ? 'bg-purple-50 border-purple-500 text-purple-800'
-      : session.department === Department.EVENT
-      ? 'bg-orange-50 border-orange-500 text-orange-800'
-      : session.department === Department.ER
-      ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
-      : 'bg-blue-50 border-blue-500 text-blue-800'
-  }
-`}
-      >
-        <div className="font-semibold text-[10px] leading-tight">
-          {session.startTime} – {calculateEndTime(session.startTime, session.duration)}
-        </div>
-        <div className="text-[9px] opacity-70 leading-tight">
-          ({session.duration}')
-        </div>
-      </div>
+    // 👉 MOBILE: CARD GỌN 3 DÒNG
+<div
+  key={session.id}
+  onClick={() => openBottomSheet(session)}
+  className={`
+    px-1.5 py-1 rounded border-l-4
+    text-[10px] leading-tight
+    overflow-hidden cursor-pointer active:scale-[0.98] transition
+    whitespace-nowrap
+    ${
+      session.department === Department.MEDIA
+        ? 'bg-purple-50 border-purple-500 text-purple-800'
+        : session.department === Department.EVENT
+        ? 'bg-orange-50 border-orange-500 text-orange-800'
+        : session.department === Department.ER
+        ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+        : 'bg-blue-50 border-blue-500 text-blue-800'
+    }
+  `}
+>
+  {/* 1️⃣ Thời gian */}
+  <div className="font-semibold truncate">
+    {session.startTime} – {calculateEndTime(session.startTime, session.duration)} ({session.duration}')
+  </div>
+
+  {/* 2️⃣ Tên Training */}
+  <div className="truncate opacity-90">
+    {session.topic}
+  </div>
+
+  {/* 3️⃣ Địa điểm */}
+  <div className="truncate opacity-70 text-[9px]">
+    {session.locationDetail || (session.locationType === LocationType.HALL ? 'Hall' : 'P.?')}
+  </div>
+</div>
+
     ) : (
       // 👉 DESKTOP: GIAO DIỆN ĐẦY ĐỦ CŨ
       <div
@@ -566,7 +576,14 @@ useEffect(() => {
     <div className="space-y-6">
 
       {/* HEADER */}
-      <div className="bg-white rounded-2xl p-4 md:p-6 border border-slate-200 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+      <div className="bg-white rounded-b-2xl 
+  p-2 md:p-6 
+  border-b border-slate-200 shadow-sm 
+  flex flex-col md:flex-row justify-between items-center 
+  gap-2 md:gap-4
+  sticky top-0 z-20
+">
+
         <div>
           <h2 className="text-xl font-bold text-slate-800">Lịch Training</h2>
           <p className="text-sm text-slate-500">Xem và quản lý lịch trình chi tiết</p>
