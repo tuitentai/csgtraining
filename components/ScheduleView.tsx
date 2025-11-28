@@ -531,5 +531,7 @@ return (
       : uniqueDates.map((date) => renderDaySchedule(date))}
   </div>
 );
+
+}; 
   
 export default ScheduleView;
