@@ -59,17 +59,24 @@ const App: React.FC = () => {
 
       // Fetch the latest sessions and app config directly from Firestore
       const sessions = getSessions();
-      const approved = sessions.filter((s) => s.status === Status.APPROVED).length;
-      const pending = sessions.filter((s) => s.status === Status.PENDING).length;
+      
+      // Sắp xếp lại dữ liệu sau khi lấy từ Firestore (sắp xếp theo Deadline)
+      const sortedSessions = sessions.sort((a, b) => {
+        return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
+      });
+
+      const approved = sortedSessions.filter((s) => s.status === Status.APPROVED).length;
+      const pending = sortedSessions.filter((s) => s.status === Status.PENDING).length;
 
       setStats({
-        total: sessions.length,
+        total: sortedSessions.length,
         approved,
         pending,
       });
       
       setAppConfig(getAppConfig());
 
+      // Cập nhật sessions với dữ liệu đã sắp xếp
       setIsLoading(false); // Once data is fetched, set loading to false
     };
 
