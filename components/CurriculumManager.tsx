@@ -10,15 +10,25 @@ const CurriculumManager: React.FC = () => {
   const [activeTab, setActiveTab] = useState<string>('ALL');
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<TrainingSession>>({});
-  
+
   // AI Assistant State
   const [isAiOpen, setIsAiOpen] = useState(false);
   const [aiContext, setAiContext] = useState({ topic: '', reqs: '' });
 
+  // Fetch sessions and board members when the component mounts
   useEffect(() => {
-    setSessions(getSessions());
-    setBoardMembers(getBoardMembers());
-  }, []);
+    const loadedSessions = getSessions();
+    const loadedBoardMembers = getBoardMembers();
+    
+    setSessions(loadedSessions);
+    setBoardMembers(loadedBoardMembers);
+  }, []); // This effect runs only once when the component mounts
+
+  // Fetch sessions whenever the view changes (relying on view as a dependency)
+  useEffect(() => {
+    const loadedSessions = getSessions();  // Always reload sessions when view changes
+    setSessions(loadedSessions);           // Update state with new sessions
+  }, [activeTab]);  // Trigger effect when activeTab changes
 
   const handleEditClick = (session: TrainingSession) => {
     setEditingId(session.id);
@@ -183,6 +193,7 @@ const CurriculumManager: React.FC = () => {
                                 ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                 : 'bg-slate-100 text-slate-500 border-slate-200'
                             }`}
+
                         >
                           {session.department}
                         </span>
@@ -240,7 +251,7 @@ const CurriculumManager: React.FC = () => {
                             <input 
                               type="date"
                               className="w-full bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs"
-                              value={editForm.deadline || ''}
+                              value={editForm.deadline || ''} 
                               onChange={(e) => handleChange('deadline', e.target.value)}
                             />
                           ) : (
@@ -299,7 +310,7 @@ const CurriculumManager: React.FC = () => {
                             <input 
                               type="text" 
                               className="w-full bg-slate-50 border border-slate-200 rounded-md px-2 py-1.5 text-sm focus:bg-white focus:border-orange-500 focus:ring-2 focus:ring-orange-100 outline-none transition-all"
-                              value={editForm.materialsLink || ''}
+                              value={editForm.materialsLink || ''} 
                               onChange={(e) => handleChange('materialsLink', e.target.value)}
                               placeholder="https://docs.google.com..."
                             />
