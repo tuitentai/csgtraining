@@ -49,6 +49,8 @@ const App: React.FC = () => {
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [isLoading, setIsLoading] = useState(true);  // To track if data is still loading
+  const [statusFilter, setStatusFilter] = useState<Status | 'ALL'>('ALL'); // Lọc theo tình trạng
+  const [sessions, setSessions] = useState([]);
 
   // 🔥 Mới thêm vào: Load data ngay lập tức từ Firestore khi trang reload
   useEffect(() => {
@@ -59,7 +61,7 @@ const App: React.FC = () => {
 
       // Fetch the latest sessions and app config directly from Firestore
       const sessions = getSessions();
-      
+
       // Sắp xếp lại dữ liệu sau khi lấy từ Firestore (sắp xếp theo Deadline)
       const sortedSessions = sessions.sort((a, b) => {
         return new Date(a.deadline).getTime() - new Date(b.deadline).getTime();
@@ -77,6 +79,7 @@ const App: React.FC = () => {
       setAppConfig(getAppConfig());
 
       // Cập nhật sessions với dữ liệu đã sắp xếp
+      setSessions(sortedSessions);
       setIsLoading(false); // Once data is fetched, set loading to false
     };
 
@@ -139,135 +142,88 @@ const App: React.FC = () => {
       );
     }
 
-    switch (view) {
-      case 'dashboard':
-        return (
-          <div className="space-y-8 animate-in fade-in duration-500">
-            {/* Hero Section */}
-            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-orange-500 via-orange-600 to-red-600 text-white shadow-xl">
-              <div className="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl"></div>
-              <div className="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-yellow-300 opacity-20 rounded-full blur-2xl"></div>
-              <div className="relative p-8 md:p-10 flex flex-col md:flex-row items-center gap-6">
-                <div className="hidden md:block shrink-0">{renderLogo()}</div>
-                <div className="flex-1">
-                  <h1 className="text-3xl md:text-4xl font-bold mb-3 tracking-tight">
-                    {appConfig.welcomeTitle || `Xin chào ${appConfig.title}! 👋`}
-                  </h1>
-                  <p className="text-orange-50 text-lg max-w-2xl opacity-90 font-light whitespace-pre-line leading-relaxed">
-                    {appConfig.welcomeDescription || 'Hệ thống quản lý đào tạo chuyên nghiệp.'}
-                  </p>
-                  <div className="mt-8 flex flex-wrap gap-4">
-                    <button
-                      onClick={() => setView('curriculum')}
-                      className="bg-white text-orange-600 px-6 py-3 rounded-full font-bold shadow-lg shadow-orange-900/20 hover:bg-orange-50 hover:scale-105 transition-all active:scale-95"
-                    >
-                      Soạn Giáo Án Ngay
-                    </button>
-                    <button
-                      onClick={() => setView('schedule')}
-                      className="bg-orange-800/30 backdrop-blur-sm border border-white/20 text-white px-6 py-3 rounded-full font-bold hover:bg-orange-800/40 transition-all"
-                    >
-                      Xem Lịch Training
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
+    // Lọc dữ liệu theo tình trạng
+    const filteredSessions = statusFilter === 'ALL'
+      ? sessions
+      : sessions.filter((session) => session.status === statusFilter);
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
-                  <FileText size={24} />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 font-medium">Tổng giáo án</p>
-                  <p className="text-2xl font-bold text-slate-800">{stats.total}</p>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md">
-                <div className="p-3 bg-green-50 text-green-600 rounded-xl">
-                  <CheckCircle2 size={24} />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 font-medium">Đã duyệt</p>
-                  <p className="text-2xl font-bold text-slate-800">{stats.approved}</p>
-                </div>
-              </div>
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md">
-                <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
-                  <TrendingUp size={24} />
-                </div>
-                <div>
-                  <p className="text-sm text-slate-500 font-medium">Tiến độ hoàn thành</p>
-                  <p className="text-2xl font-bold text-slate-800">
-                    {stats.total > 0 ? Math.round((stats.approved / stats.total) * 100) : 0}%
-                  </p>
-                </div>
-              </div>
-            </div>
+    return (
+      <div className="space-y-8 animate-in fade-in duration-500">
+        {/* Nút lọc theo tình trạng */}
+        <div className="flex space-x-4">
+          {Object.values(Status).map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(status)}
+              className={`${
+                statusFilter === status
+                  ? 'bg-orange-500 text-white'
+                  : 'bg-slate-100 text-slate-700 hover:bg-orange-50'
+              } px-4 py-2 rounded-xl`}
+            >
+              {status === 'ALL' ? 'Tất cả' : status}
+            </button>
+          ))}
+        </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2">
-                <BoardInfo />
-              </div>
-              <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm h-fit">
-                <h3 className="font-bold text-slate-800 mb-4 flex items-center">
-                  <Clock className="mr-2 text-orange-500" size={20} /> Sự kiện sắp tới
-                </h3>
-                <div className="space-y-4">
-                  <div className="flex gap-4 items-start p-3 rounded-lg bg-slate-50">
-                    <div className="bg-white border border-slate-200 rounded-lg p-2 text-center min-w-[60px]">
-                      <span className="block text-xs font-bold text-orange-600 uppercase">Tháng 12</span>
-                      <span className="block text-xl font-bold text-slate-800">06</span>
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-slate-800 text-sm">Training Ban Media</h4>
-                      <p className="text-xs text-slate-500 mt-1">13:30 - 17:00 • Phòng Học</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md">
+            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl">
+              <FileText size={24} />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500 font-medium">Tổng giáo án</p>
+              <p className="text-2xl font-bold text-slate-800">{filteredSessions.length}</p>
             </div>
           </div>
-        );
-      case 'curriculum':
-        return <CurriculumManager />;
-      case 'schedule':
-        return <ScheduleView />;
-      case 'board':
-        return <BoardInfo />;
-      case 'guide':
-        return <UserGuide />;
-      case 'admin':
-        if (!adminUser) return <AdminLogin onLogin={handleAdminLogin} />;
-        if (!adminUser.roleType)
-          return (
-            <div className="min-h-[60vh] flex flex-col items-center justify-center p-4">
-              <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mb-6">
-                <ShieldBan className="text-red-600" size={40} />
-              </div>
-              <h2 className="text-2xl font-bold text-slate-800 mb-2">Truy cập bị từ chối</h2>
-              <button
-                onClick={handleAdminLogout}
-                className="flex items-center px-6 py-3 bg-white border border-slate-200 shadow-sm text-slate-700 font-bold rounded-xl hover:bg-slate-50 hover:text-red-600"
-              >
-                <LogOut className="mr-2" size={18} /> Đăng xuất
-              </button>
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md">
+            <div className="p-3 bg-green-50 text-green-600 rounded-xl">
+              <CheckCircle2 size={24} />
             </div>
-          );
-        return <AdminPanel user={adminUser} onLogout={handleAdminLogout} />;
-      default:
-        return <div className="text-center p-10">404 - Not Found</div>;
-    }
+            <div>
+              <p className="text-sm text-slate-500 font-medium">Đã duyệt</p>
+              <p className="text-2xl font-bold text-slate-800">
+                {filteredSessions.filter((s) => s.status === Status.APPROVED).length}
+              </p>
+            </div>
+          </div>
+          <div className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm flex items-center space-x-4 hover:shadow-md">
+            <div className="p-3 bg-orange-50 text-orange-600 rounded-xl">
+              <TrendingUp size={24} />
+            </div>
+            <div>
+              <p className="text-sm text-slate-500 font-medium">Tiến độ hoàn thành</p>
+              <p className="text-2xl font-bold text-slate-800">
+                {filteredSessions.length > 0
+                  ? Math.round(
+                      (filteredSessions.filter((s) => s.status === Status.APPROVED).length /
+                        filteredSessions.length) *
+                        100
+                    )
+                  : 0}
+                %
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Render danh sách giáo án */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {filteredSessions.map((session) => (
+            <div key={session.id} className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+              <h3>{session.topic}</h3>
+              <p>{session.status}</p>
+              {/* Add other session details here */}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
   };
 
-  // --- Layout ---
   return (
-    <div
-      className="min-h-screen bg-slate-50 flex font-sans"
-      onSubmit={(e) => e.preventDefault()} // ✅ Chặn reload toàn app
-    >
+    <div className="min-h-screen bg-slate-50 flex font-sans" onSubmit={(e) => e.preventDefault()}>
       {/* Sidebar */}
       <aside className="hidden md:flex flex-col w-72 bg-white border-r border-slate-200 h-screen fixed top-0 left-0 z-30">
         <div className="p-8 flex items-center">
@@ -290,7 +246,9 @@ const App: React.FC = () => {
                   : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
               }`}
             >
-              <span className={`mr-3 ${view === item.id ? 'text-orange-600' : 'text-slate-400'}`}>{item.icon}</span>
+              <span className={`mr-3 ${view === item.id ? 'text-orange-600' : 'text-slate-400'}`}>
+                {item.icon}
+              </span>
               {item.label}
             </button>
           ))}
