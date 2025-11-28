@@ -295,7 +295,7 @@ const App: React.FC = () => {
 
       {/* Main */}
       <main className="flex-1 md:ml-72 p-4 md:p-10 pt-24 md:pt-10 max-w-7xl mx-auto w-full">
-        <div key={refreshKey}>{renderContent()}</div>
+        <div>{renderContent()}</div>
       </main>
 
       {/* Mobile Bottom Nav */}
