@@ -48,6 +48,7 @@ const App: React.FC = () => {
 
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);  // New state to track data loading
 
   // 🔥 Subscribe Firestore changes
   useEffect(() => {
@@ -71,6 +72,7 @@ const App: React.FC = () => {
         pending,
       });
       setAppConfig(getAppConfig());
+      setIsDataLoaded(true);  // Mark data as loaded
     })();
   }, [view]); // Chỉ reload khi 'view' thay đổi
 
@@ -124,6 +126,12 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
+    if (!isDataLoaded) {
+      return (
+        <div className="text-center p-10">Đang tải dữ liệu...</div>  // Show loading state until data is loaded
+      );
+    }
+
     switch (view) {
       case 'dashboard':
         return (
