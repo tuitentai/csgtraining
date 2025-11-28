@@ -31,7 +31,6 @@ import {
 const SUPER_ADMIN_EMAIL = 'thanhtailai2003@gmail.com';
 
 const App: React.FC = () => {
-  // ✅ Giữ lại view người dùng chọn lần cuối
   const [view, setView] = useState<ViewState>(() => {
     const savedView = localStorage.getItem('currentView');
     return (savedView as ViewState) || 'dashboard';
@@ -47,8 +46,8 @@ const App: React.FC = () => {
   });
 
   const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [isLoading, setIsLoading] = useState(true); // New state to track data loading
   const [refreshKey, setRefreshKey] = useState(0);
-  const [isDataLoaded, setIsDataLoaded] = useState(false);  // New state to track data loading
 
   // 🔥 Subscribe Firestore changes
   useEffect(() => {
@@ -62,17 +61,23 @@ const App: React.FC = () => {
     if (view === 'schedule' || view === 'curriculum' || view === 'admin') return;
 
     (async () => {
-      await waitForFirestoreReady();
-      const sessions = getSessions();
-      const approved = sessions.filter((s) => s.status === Status.APPROVED).length;
-      const pending = sessions.filter((s) => s.status === Status.PENDING).length;
-      setStats({
-        total: sessions.length,
-        approved,
-        pending,
-      });
-      setAppConfig(getAppConfig());
-      setIsDataLoaded(true);  // Mark data as loaded
+      setIsLoading(true);  // Set loading to true when data is being fetched
+      try {
+        await waitForFirestoreReady();
+        const sessions = getSessions();
+        const approved = sessions.filter((s) => s.status === Status.APPROVED).length;
+        const pending = sessions.filter((s) => s.status === Status.PENDING).length;
+        setStats({
+          total: sessions.length,
+          approved,
+          pending,
+        });
+        setAppConfig(getAppConfig());
+      } catch (error) {
+        console.error("Error loading data: ", error);
+      } finally {
+        setIsLoading(false);  // Set loading to false once data is loaded
+      }
     })();
   }, [view]); // Chỉ reload khi 'view' thay đổi
 
@@ -126,7 +131,7 @@ const App: React.FC = () => {
   };
 
   const renderContent = () => {
-    if (!isDataLoaded) {
+    if (isLoading) {
       return (
         <div className="text-center p-10">Đang tải dữ liệu...</div>  // Show loading state until data is loaded
       );
