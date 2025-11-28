@@ -123,7 +123,7 @@ useEffect(() => {
       days.push(
         <div
           key={day}
-          className={`min-h-[10rem] bg-white border border-slate-200 p-2 relative ${
+          className={`min-h-[6rem] md:min-h-[10rem] bg-white border border-slate-200 p-1.5 relative ${
             isToday ? 'bg-orange-50/40' : ''
           }`}
         >
@@ -137,7 +137,7 @@ useEffect(() => {
           </div>
 
           {/* COMPACT ITEM CHO MOBILE */}
-        <div className="space-y-1.5">
+        <div className="space-y-1 md:space-y-1.5">
   {daySessions.map(session => (
     isMobile ? (
       // 👉 MOBILE: CARD GỌN
@@ -145,23 +145,25 @@ useEffect(() => {
         key={session.id}
         onClick={() => openBottomSheet(session)}
         className={`
-          text-[11px] px-2 py-2 rounded-md border-l-4 shadow-sm
-          cursor-pointer active:scale-[0.98] transition
-          ${
-            session.department === Department.MEDIA
-              ? 'bg-purple-50 border-purple-500 text-purple-800'
-              : session.department === Department.EVENT
-              ? 'bg-orange-50 border-orange-500 text-orange-800'
-              : session.department === Department.ER
-              ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
-              : 'bg-blue-50 border-blue-500 text-blue-800'
-          }
-        `}
+  text-[10px] px-1.5 py-1 rounded border-l-4 
+  whitespace-nowrap overflow-hidden text-ellipsis
+  active:scale-[0.98] transition cursor-pointer
+  md:px-2 md:py-2
+  ${
+    session.department === Department.MEDIA
+      ? 'bg-purple-50 border-purple-500 text-purple-800'
+      : session.department === Department.EVENT
+      ? 'bg-orange-50 border-orange-500 text-orange-800'
+      : session.department === Department.ER
+      ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+      : 'bg-blue-50 border-blue-500 text-blue-800'
+  }
+`}
       >
-        <div className="font-semibold">
+        <div className="font-semibold text-[10px] leading-tight">
           {session.startTime} – {calculateEndTime(session.startTime, session.duration)}
         </div>
-        <div className="text-[10px] opacity-70">
+        <div className="text-[9px] opacity-70 leading-tight">
           ({session.duration}')
         </div>
       </div>
