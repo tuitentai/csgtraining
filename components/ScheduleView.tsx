@@ -26,16 +26,15 @@ const ScheduleView: React.FC = () => {
     return (localStorage.getItem('viewMode') as 'list' | 'calendar') || 'list';
   });
 
- // Detect mobile screen
-const [isMobile, setIsMobile] = useState(false);
+  // Detect mobile screen
+  const [isMobile, setIsMobile] = useState(false);
 
-useEffect(() => {
-  const check = () => setIsMobile(window.innerWidth < 768);
-  check();
-  window.addEventListener("resize", check);
-  return () => window.removeEventListener("resize", check);
-}, []);
- 
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   const [currentDate, setCurrentDate] = useState(() => {
     const now = new Date();
@@ -46,7 +45,7 @@ useEffect(() => {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [sheetSession, setSheetSession] = useState<TrainingSession | null>(null);
 
-  // Modal edit nhanh (đã có)
+  // Modal edit nhanh
   const [editModal, setEditModal] = useState<{ open: boolean; session?: TrainingSession | null }>({
     open: false,
     session: null,
@@ -89,6 +88,40 @@ useEffect(() => {
   const openBottomSheet = (session: TrainingSession) => {
     setSheetSession(session);
     setSheetOpen(true);
+  };
+
+  // ======================== INLINE EDIT LOGIC (LIST VIEW) ========================
+  const handleEditChange = (field: keyof TrainingSession, value: any) => {
+    setEditedSession(prev =>
+      prev ? ({ ...prev, [field]: value } as TrainingSession) : prev
+    );
+  };
+
+  const handleEditClick = (session: TrainingSession) => {
+    // Nếu đang sửa chính session này => LƯU
+    if (editingId === session.id) {
+      if (editedSession) {
+        updateSession(editedSession);
+        setSessions(prev =>
+          prev.map(s => (s.id === editedSession.id ? editedSession : s))
+        );
+      }
+      setEditingId(null);
+      setEditedSession(null);
+      return;
+    }
+
+    // Nếu đang sửa session khác mà chưa lưu, tự động lưu lại
+    if (editingId && editedSession) {
+      updateSession(editedSession);
+      setSessions(prev =>
+        prev.map(s => (s.id === editedSession.id ? editedSession : s))
+      );
+    }
+
+    // Bắt đầu sửa session mới
+    setEditingId(session.id);
+    setEditedSession({ ...session });
   };
 
   // ======================== CALENDAR VIEW ========================
@@ -137,90 +170,98 @@ useEffect(() => {
           </div>
 
           {/* COMPACT ITEM CHO MOBILE */}
-        <div className="space-y-1 md:space-y-1.5">
-  {daySessions.map(session => (
-    isMobile ? (
-      // 👉 MOBILE: CARD GỌN
-    // 👉 MOBILE: CARD GỌN 3 DÒNG
-<div
-  key={session.id}
-  onClick={() => openBottomSheet(session)}
-  className={`
-    px-1.5 py-1 rounded border-l-4
-    text-[10px] leading-tight
-    overflow-hidden cursor-pointer active:scale-[0.98] transition
-    whitespace-nowrap
-    ${
-      session.department === Department.MEDIA
-        ? 'bg-purple-50 border-purple-500 text-purple-800'
-        : session.department === Department.EVENT
-        ? 'bg-orange-50 border-orange-500 text-orange-800'
-        : session.department === Department.ER
-        ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
-        : 'bg-blue-50 border-blue-500 text-blue-800'
-    }
-  `}
->
-  {/* 1️⃣ Thời gian */}
-  <div className="font-semibold truncate">
-    {session.startTime} – {calculateEndTime(session.startTime, session.duration)} ({session.duration}')
-  </div>
+          <div className="space-y-1 md:space-y-1.5">
+            {daySessions.map(session =>
+              isMobile ? (
+                // 👉 MOBILE: CARD GỌN 3 DÒNG
+                <div
+                  key={session.id}
+                  onClick={() => openBottomSheet(session)}
+                  className={`
+                    px-1.5 py-1 rounded border-l-4
+                    text-[10px] leading-tight
+                    overflow-hidden cursor-pointer active:scale-[0.98] transition
+                    whitespace-nowrap
+                    ${
+                      session.department === Department.MEDIA
+                        ? 'bg-purple-50 border-purple-500 text-purple-800'
+                        : session.department === Department.EVENT
+                        ? 'bg-orange-50 border-orange-500 text-orange-800'
+                        : session.department === Department.ER
+                        ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+                        : 'bg-blue-50 border-blue-500 text-blue-800'
+                    }
+                  `}
+                >
+                  {/* 1️⃣ Thời gian */}
+                  <div className="font-semibold truncate">
+                    {session.startTime} –{' '}
+                    {calculateEndTime(session.startTime, session.duration)} (
+                    {session.duration}')
+                  </div>
 
-  {/* 2️⃣ Tên Training */}
-  <div className="truncate opacity-90">
-    {session.topic}
-  </div>
+                  {/* 2️⃣ Tên Training */}
+                  <div className="truncate opacity-90">{session.topic}</div>
 
-  {/* 3️⃣ Địa điểm */}
-  <div className="truncate opacity-70 text-[9px]">
-    {session.locationDetail || (session.locationType === LocationType.HALL ? 'Hall' : 'P.?')}
-  </div>
-</div>
+                  {/* 3️⃣ Địa điểm */}
+                  <div className="truncate opacity-70 text-[9px]">
+                    {session.locationDetail ||
+                      (session.locationType === LocationType.HALL
+                        ? 'Hall'
+                        : 'P.?')}
+                  </div>
+                </div>
+              ) : (
+                // 👉 DESKTOP: GIAO DIỆN ĐẦY ĐỦ CŨ
+                <div
+                  key={session.id}
+                  className={`
+                    text-[10px] px-2 py-1.5 rounded border-l-2 relative
+                    ${
+                      session.department === Department.MEDIA
+                        ? 'bg-purple-50 text-purple-700 border-purple-500'
+                        : session.department === Department.EVENT
+                        ? 'bg-orange-50 text-orange-700 border-orange-500'
+                        : session.department === Department.ER
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-500'
+                        : 'bg-blue-50 text-blue-700 border-blue-500'
+                    }
+                  `}
+                >
+                  <div className="font-bold flex justify-between items-center mb-0.5">
+                    <span>
+                      {session.startTime} –{' '}
+                      {calculateEndTime(session.startTime, session.duration)} (
+                      {session.duration}')
+                    </span>
+                    <button
+                      onClick={() => openEditModal(session)}
+                      className="text-slate-400 hover:text-slate-700 p-1 transition-colors"
+                    >
+                      ✏️
+                    </button>
+                  </div>
 
-    ) : (
-      // 👉 DESKTOP: GIAO DIỆN ĐẦY ĐỦ CŨ
-      <div
-        key={session.id}
-        className={`
-          text-[10px] px-2 py-1.5 rounded border-l-2 relative
-          ${
-            session.department === Department.MEDIA
-              ? 'bg-purple-50 text-purple-700 border-purple-500'
-              : session.department === Department.EVENT
-              ? 'bg-orange-50 text-orange-700 border-orange-500'
-              : session.department === Department.ER
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-500'
-              : 'bg-blue-50 text-blue-700 border-blue-500'
-          }
-        `}
-      >
-        <div className="font-bold flex justify-between items-center mb-0.5">
-          <span>
-            {session.startTime} – {calculateEndTime(session.startTime, session.duration)} ({session.duration}')
-          </span>
-          <button
-            onClick={() => openEditModal(session)}
-            className="text-slate-400 hover:text-slate-700 p-1 transition-colors"
-          >
-            ✏️
-          </button>
-        </div>
+                  <div className="truncate font-medium mb-0.5">
+                    {session.topic}
+                  </div>
 
-        <div className="truncate font-medium mb-0.5">{session.topic}</div>
+                  <div className="truncate opacity-75 text-[9px] flex items-center">
+                    <User size={8} className="mr-0.5" />{' '}
+                    {session.trainerName || 'No Trainer'}
+                  </div>
 
-        <div className="truncate opacity-75 text-[9px] flex items-center">
-          <User size={8} className="mr-0.5" /> {session.trainerName || 'No Trainer'}
-        </div>
-
-        <div className="truncate text-[9px] text-slate-500 flex items-center">
-          <MapPin size={8} className="mr-0.5" />
-          {session.locationDetail || (session.locationType === LocationType.HALL ? 'Hall' : 'P.?')}
-        </div>
-      </div>
-    )
-  ))}
-</div>
-
+                  <div className="truncate text-[9px] text-slate-500 flex items-center">
+                    <MapPin size={8} className="mr-0.5" />
+                    {session.locationDetail ||
+                      (session.locationType === LocationType.HALL
+                        ? 'Hall'
+                        : 'P.?')}
+                  </div>
+                </div>
+              )
+            )}
+          </div>
         </div>
       );
     }
@@ -238,7 +279,10 @@ useEffect(() => {
               <button
                 onClick={() =>
                   setCurrentDate(
-                    new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)
+                    new Date(
+                      currentDate.getFullYear(),
+                      currentDate.getMonth() - 1
+                    )
                   )
                 }
                 className="p-1.5 hover:bg-white rounded-lg text-slate-500"
@@ -249,7 +293,10 @@ useEffect(() => {
               <button
                 onClick={() =>
                   setCurrentDate(
-                    new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)
+                    new Date(
+                      currentDate.getFullYear(),
+                      currentDate.getMonth() + 1
+                    )
                   )
                 }
                 className="p-1.5 hover:bg-white rounded-lg text-slate-500"
@@ -262,7 +309,10 @@ useEffect(() => {
           {/* HEADER thứ */}
           <div className="grid grid-cols-7 bg-slate-50 border-b">
             {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map(d => (
-              <div key={d} className="py-2 text-center text-xs font-bold text-slate-400 uppercase">
+              <div
+                key={d}
+                className="py-2 text-center text-xs font-bold text-slate-400 uppercase"
+              >
                 {d}
               </div>
             ))}
@@ -276,6 +326,7 @@ useEffect(() => {
       </>
     );
   };
+
   // ======================== BOTTOM SHEET ========================
   const BottomSheet = () => {
     if (!sheetOpen || !sheetSession) return null;
@@ -301,7 +352,10 @@ useEffect(() => {
               <Clock size={16} className="text-slate-500" />
               <span className="font-semibold">
                 {sheetSession.startTime} –{' '}
-                {calculateEndTime(sheetSession.startTime, sheetSession.duration)}
+                {calculateEndTime(
+                  sheetSession.startTime,
+                  sheetSession.duration
+                )}
               </span>
               <span className="text-slate-500 ml-1">
                 ({sheetSession.duration}')
@@ -311,9 +365,7 @@ useEffect(() => {
             {/* TRAINER */}
             <div className="flex items-center gap-2">
               <User size={16} className="text-slate-500" />
-              <span>
-                {sheetSession.trainerName || 'Chưa có Trainer'}
-              </span>
+              <span>{sheetSession.trainerName || 'Chưa có Trainer'}</span>
             </div>
 
             {/* LOCATION */}
@@ -321,7 +373,8 @@ useEffect(() => {
               <MapPin size={16} className="text-slate-500" />
               <span>
                 {sheetSession.locationType}{' '}
-                {sheetSession.locationDetail && `• ${sheetSession.locationDetail}`}
+                {sheetSession.locationDetail &&
+                  `• ${sheetSession.locationDetail}`}
               </span>
             </div>
 
@@ -352,7 +405,7 @@ useEffect(() => {
     );
   };
 
-  // ======================== EDIT MODAL (CŨ + GIỮ NGUYÊN) ========================
+  // ======================== EDIT MODAL (nhanh) ========================
   const openEditModal = (session: TrainingSession) => {
     setTempSession({ ...session });
     setEditModal({ open: true, session });
@@ -397,9 +450,7 @@ useEffect(() => {
             <input
               type="time"
               value={tempSession.startTime}
-              onChange={e =>
-                handleModalChange('startTime', e.target.value)
-              }
+              onChange={e => handleModalChange('startTime', e.target.value)}
               className="w-full border rounded p-2 text-sm"
             />
 
@@ -436,14 +487,21 @@ useEffect(() => {
       </div>
     );
   };
+
   // ======================== LIST VIEW ========================
   const renderDaySchedule = (dateStr: string) => {
     const daySessions = sessions.filter(s => s.date === dateStr);
     const dateObj = new Date(dateStr);
-    const dayName = new Intl.DateTimeFormat('vi-VN', { weekday: 'long' }).format(dateObj);
+    const dayName = new Intl.DateTimeFormat('vi-VN', {
+      weekday: 'long',
+    }).format(dateObj);
     const dateFormatted = formatDate(dateStr);
-    const depts = Array.from(new Set(daySessions.map(s => s.department))).join(', ');
-    const label = `${dayName.charAt(0).toUpperCase() + dayName.slice(1)} - ${dateFormatted}`;
+    const depts = Array.from(new Set(daySessions.map(s => s.department))).join(
+      ', '
+    );
+    const label = `${
+      dayName.charAt(0).toUpperCase() + dayName.slice(1)
+    } - ${dateFormatted}`;
 
     return (
       <div key={dateStr} className="mb-10 relative">
@@ -453,14 +511,19 @@ useEffect(() => {
           </div>
           <div>
             <h3 className="text-lg font-bold text-slate-800">{label}</h3>
-            {depts && <p className="text-xs text-slate-500 font-medium">Training: {depts}</p>}
+            {depts && (
+              <p className="text-xs text-slate-500 font-medium">
+                Training: {depts}
+              </p>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-4">
           {daySessions.map(session => {
             const isEditing = editingId === session.id;
-            const currentData = isEditing && editedSession ? editedSession : session;
+            const currentData =
+              isEditing && editedSession ? editedSession : session;
 
             const deptColor =
               session.department === Department.MEDIA
@@ -475,25 +538,36 @@ useEffect(() => {
               <div
                 key={session.id}
                 className={`relative bg-white rounded-2xl border transition-all ${deptColor} ${
-                  isEditing ? 'border-green-500 ring-1 ring-green-200' : 'border-slate-200 hover:border-orange-200'
+                  isEditing
+                    ? 'border-green-500 ring-1 ring-green-200'
+                    : 'border-slate-200 hover:border-orange-200'
                 }`}
               >
                 <div className="p-5 pl-7">
                   <div className="flex justify-between items-start mb-3">
-                    <div className="flex items-center text-slate-800 font-bold text-lg">
-                      <Clock size={18} className="mr-2 text-slate-400" />
+                    <div className="flex items-center text-slate-800 font-bold text-lg space-x-2">
+                      <Clock size={18} className="text-slate-400" />
                       {isEditing ? (
-                        <input
-                          type="time"
-                          value={currentData.startTime}
-                          onChange={e => handleEditChange('startTime', e.target.value)}
-                          className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-sm w-24 focus:border-orange-500"
-                        />
+                        <>
+                          <input
+                            type="time"
+                            value={currentData.startTime}
+                            onChange={e =>
+                              handleEditChange('startTime', e.target.value)
+                            }
+                            className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-sm w-24 focus:border-orange-500"
+                          />
+                        </>
                       ) : (
                         <span className="flex items-center">
                           <span>{session.startTime}</span>
                           <span className="mx-1 text-slate-400">–</span>
-                          <span>{calculateEndTime(session.startTime, session.duration)}</span>
+                          <span>
+                            {calculateEndTime(
+                              session.startTime,
+                              session.duration
+                            )}
+                          </span>
                           <span className="text-sm font-normal text-slate-400 ml-1">
                             ({session.duration}')
                           </span>
@@ -519,12 +593,31 @@ useEffect(() => {
                   </div>
 
                   {isEditing && (
-                    <div className="text-[10px] text-slate-500 mb-2">
-                      Kết thúc: {calculateEndTime(currentData.startTime, currentData.duration)}
+                    <div className="text-[10px] text-slate-500 mb-2 flex items-center gap-1">
+                      <span>
+                        Kết thúc:{' '}
+                        {calculateEndTime(
+                          currentData.startTime,
+                          currentData.duration
+                        )}
+                      </span>
+                      <span className="mx-1 text-slate-300">•</span>
+                      <span>Thời lượng:</span>
+                      <input
+                        type="number"
+                        className="w-14 border border-slate-200 rounded px-1 py-0.5 text-[10px]"
+                        value={currentData.duration}
+                        onChange={e =>
+                          handleEditChange('duration', Number(e.target.value))
+                        }
+                      />
+                      <span>'</span>
                     </div>
                   )}
 
-                  <h4 className="font-bold text-slate-800 text-lg mb-1">{session.topic}</h4>
+                  <h4 className="font-bold text-slate-800 text-lg mb-1">
+                    {session.topic}
+                  </h4>
 
                   <div className="flex items-center text-sm text-slate-500 mb-4">
                     <User size={14} className="mr-1.5" />
@@ -532,19 +625,57 @@ useEffect(() => {
                   </div>
 
                   <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
-                    <div className="flex items-center text-sm font-medium text-slate-700">
+                    <div className="flex items-center text-sm font-medium text-slate-700 space-x-2">
                       <div
-                        className={`p-1.5 rounded-full mr-2 ${
+                        className={`p-1.5 rounded-full ${
                           currentData.locationType === LocationType.HALL
                             ? 'bg-indigo-50 text-indigo-600'
                             : 'bg-emerald-50 text-emerald-600'
                         }`}
                       >
-                        {currentData.locationType === LocationType.HALL ? <Users size={14} /> : <MapPin size={14} />}
+                        {currentData.locationType === LocationType.HALL ? (
+                          <Users size={14} />
+                        ) : (
+                          <MapPin size={14} />
+                        )}
                       </div>
-                      <span>
-                        {session.locationType} {session.locationDetail && `• ${session.locationDetail}`}
-                      </span>
+
+                      {isEditing ? (
+                        <div className="flex items-center space-x-2">
+                          <select
+                            value={currentData.locationType}
+                            onChange={e =>
+                              handleEditChange(
+                                'locationType',
+                                e.target.value as LocationType
+                              )
+                            }
+                            className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs focus:border-orange-500"
+                          >
+                            <option value={LocationType.CLASSROOM}>
+                              {LocationType.CLASSROOM}
+                            </option>
+                            <option value={LocationType.HALL}>
+                              {LocationType.HALL}
+                            </option>
+                          </select>
+                          <input
+                            type="text"
+                            placeholder="Số phòng / Hall..."
+                            value={currentData.locationDetail || ''}
+                            onChange={e =>
+                              handleEditChange('locationDetail', e.target.value)
+                            }
+                            className="bg-slate-50 border border-slate-200 rounded px-2 py-1 text-xs w-28 focus:border-orange-500"
+                          />
+                        </div>
+                      ) : (
+                        <span>
+                          {session.locationType}{' '}
+                          {session.locationDetail &&
+                            `• ${session.locationDetail}`}
+                        </span>
+                      )}
                     </div>
 
                     {!swapMode && (
@@ -574,19 +705,21 @@ useEffect(() => {
 
   return (
     <div className="space-y-6">
-
       {/* HEADER */}
-      <div className="bg-white rounded-b-2xl 
+      <div
+        className="bg-white rounded-b-2xl 
   p-2 md:p-6 
   border-b border-slate-200 shadow-sm 
   flex flex-col md:flex-row justify-between items-center 
   gap-2 md:gap-4
   sticky top-0 z-20
-">
-
+"
+      >
         <div>
           <h2 className="text-xl font-bold text-slate-800">Lịch Training</h2>
-          <p className="text-sm text-slate-500">Xem và quản lý lịch trình chi tiết</p>
+          <p className="text-sm text-slate-500">
+            Xem và quản lý lịch trình chi tiết
+          </p>
         </div>
 
         <div className="flex items-center space-x-3 bg-slate-100 p-1 rounded-xl">
@@ -598,7 +731,9 @@ useEffect(() => {
               setSwapMode(false);
             }}
             className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium ${
-              viewMode === 'list' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
+              viewMode === 'list'
+                ? 'bg-white text-slate-800 shadow-sm'
+                : 'text-slate-500'
             }`}
           >
             <List size={16} className="mr-2" /> Danh Sách
@@ -612,7 +747,9 @@ useEffect(() => {
               setSwapMode(false);
             }}
             className={`flex items-center px-4 py-2 rounded-lg text-sm font-medium ${
-              viewMode === 'calendar' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
+              viewMode === 'calendar'
+                ? 'bg-white text-slate-800 shadow-sm'
+                : 'text-slate-500'
             }`}
           >
             <CalendarIcon size={16} className="mr-2" /> Lịch Tháng
@@ -627,10 +764,15 @@ useEffect(() => {
               setSwapSource(null);
             }}
             className={`flex items-center px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm ml-auto ${
-              swapMode ? 'bg-blue-600 text-white ring-4 ring-blue-100' : 'bg-white border text-slate-700'
+              swapMode
+                ? 'bg-blue-600 text-white ring-4 ring-blue-100'
+                : 'bg-white border text-slate-700'
             }`}
           >
-            <ArrowRightLeft size={18} className={`mr-2 ${swapMode ? 'rotate-180' : ''}`} />
+            <ArrowRightLeft
+              size={18}
+              className={`mr-2 ${swapMode ? 'rotate-180' : ''}`}
+            />
             {swapMode ? 'Đang bật Đổi lịch' : 'Đổi lịch'}
           </button>
         )}
@@ -652,7 +794,11 @@ useEffect(() => {
         {viewMode === 'list'
           ? uniqueDates.length > 0
             ? uniqueDates.map(date => renderDaySchedule(date))
-            : <div className="text-center py-20 text-slate-400">Chưa có lịch training nào.</div>
+            : (
+              <div className="text-center py-20 text-slate-400">
+                Chưa có lịch training nào.
+              </div>
+              )
           : renderCalendar()}
       </div>
 
